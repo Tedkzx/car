@@ -112,11 +112,16 @@ def test_japan_recipes_read_their_saved_real_pages(name, minimum):
         assert l.url.startswith("https://") and all(i.startswith("https://") for i in l.image_urls)
 
 
-def test_grade_r_is_spec_r_and_chassis_from_model_code():
-    l = normalise("t", {"id": 1, "url": "u", "title": "1999 NISSAN SILVIA 2WD", "attributes": "Grade R | Manual",
-                        "currency": "USD", "price": "US$ 18,000"}, "japan")
+def test_auction_grade_r_is_accident_repair_not_spec_r():
+    """Car From Japan's "Grade R" is the auction grade: accident repaired. Two such cars were Spec-S (NA)."""
+    from scoring.score import score
+
+    l = normalise("t", {"id": 1, "url": "u", "title": "1999 NISSAN SILVIA S15",
+                        "attributes": ["Model code S15", "Engine 2.00 liters", "Grade R", "Transmission Manual"],
+                        "currency": "USD", "price": "US$ 15,148"}, "japan")
     m = classify(l, japan_source=True)
-    assert (m.generation, m.engine_status, m.market) == ("S15", "factory_turbo", "jdm_overseas")
+    assert (m.generation, m.engine_status, m.in_scope) == ("S15", "unknown", False)
+    assert any("accident repairs" in f for f in score(l, m, config.DEFAULTS["scoring"]["weights"]).hard_flags)
     l = normalise("t", {"id": 1, "url": "u", "title": "1997/3 NISSAN SILVIA",
                         "attributes": "S14 Model Code MT Transmission"}, "japan")
     assert classify(l, japan_source=True).generation in ("S14", "S14a")
@@ -168,3 +173,15 @@ def test_fx_rates_are_cached_and_have_a_fallback():
 
     gbp, rate, date = FX(DB(":memory:"), client=Down()).to_gbp(2130000, "JPY")
     assert gbp == 10000.0 and date == "approximate"
+
+
+def test_real_carfromjapan_page_never_matches_on_auction_grade():
+    """Live page 2 of 6 Nov 2026: 'Grade R' on many cards, two of them Spec-S (non-turbo) by the seller's detail page."""
+    rec = engine.load_recipes([ROOT / "recipes"])["carfromjapan"]
+    html = (ROOT / "tests/fixtures/carfromjapan_live_page2.html").read_text(encoding="utf-8")
+    items = engine.extract(html, rec.data, "https://carfromjapan.com/")
+    graded_r = [i for i in items if "Grade R" in i["attributes"]]
+    assert graded_r
+    for i in graded_r:
+        m = classify(normalise("carfromjapan", dict(i, currency="USD"), "japan"), japan_source=True)
+        assert not m.in_scope, i["title"]

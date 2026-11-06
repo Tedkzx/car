@@ -34,6 +34,7 @@ HARD_FLAGS = [
     (rx(r"\bcat\s?[snab]\b|\bcategory [snab]\b|\bwrite[\s-]?off\b"), "Recorded as an insurance write-off (Cat S, N, A or B)"),
     (rx(r"\bcrashed\b|\baccident damage(d)?\b|\bfront end damage\b|\bdamaged repairable\b"), "Accident damage mentioned"),
     (rx(r"\bnon[\s-]?runner\b|\bdoes not run\b|\bdoesn'?t run\b|\bspares (or|and|/) repairs?\b|\bspares or repair\b"), "Not running, or sold as spares or repair"),
+    (rx(r"\b(?:auction\s+)?grade\s*:?\s*r[a]?\b"), "Auction grade R or RA: the car has had accident repairs"),
     (rx(r"\bneeds? welding\b|\b(bad|heavy|visible|lots of) rust\b|\brotten\b|\brust holes?\b"), "Rust or welding needed"),
 ]
 SCAM_TEXT = rx(r"\bdeposit\b.{0,30}\b(secure|hold|transfer)\b|\bcourier\b|\bshipping\b|\boverseas\b|\babroad\b|"

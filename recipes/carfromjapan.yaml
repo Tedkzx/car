@@ -1,6 +1,7 @@
 # Car From Japan exporter. Verified against the live site on 6 Nov 2026.
 # "Car Price" is FOB in US dollars (the page also shows a shipped price to a US port, not used).
-# "Grade R" on an S15 is the Spec-R.
+# "Grade" is the Japanese auction condition grade (3.5, 4, 4.5...). Grade R or RA means accident
+# repairs and is a red flag; it is NOT the Spec-R. Cards rarely state the trim, so most cars need a look.
 name: carfromjapan
 display_name: Car From Japan
 group: japan_export
