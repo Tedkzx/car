@@ -132,5 +132,5 @@ def banner(db: DB, recipes: dict, enabled: list[str], interval_minutes: int) -> 
     repairing = len(sources) - working - off
     text = f"{working} of {len(sources) - off} sources working"
     if repairing:
-        text += f", {repairing} being repaired"
+        text += f", {repairing} unavailable right now"
     return {"text": text, "ok": repairing == 0, "sources": sources}

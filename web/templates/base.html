@@ -66,6 +66,7 @@ td,th{text-align:left;padding:10px;border-bottom:1px solid var(--line)}
     {% for key, label in views.items() %}<a href="/?view={{ key }}" class="{{ 'on' if view == key else '' }}">{{ label }}{% if counts.get(key) %}<span class="n">{{ counts[key] }}</span>{% endif %}</a>{% endfor %}
     {% if counts.get('duplicates') %}<a href="/duplicates" class="{{ 'on' if view == 'duplicates' else '' }}">Same car?<span class="n">{{ counts.duplicates }}</span></a>{% endif %}
     <a href="/everything" class="{{ 'on' if view == 'everything' else '' }}">Everything found</a>
+    <a href="/price-history" class="{{ 'on' if view == 'prices' else '' }}">Price changes</a>
     <a href="/sources" class="{{ 'on' if view == 'sources' else '' }}">Sources</a>
     <a href="/settings" class="{{ 'on' if view == 'settings' else '' }}">Settings</a>
   </nav>

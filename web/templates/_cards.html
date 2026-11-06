@@ -26,6 +26,7 @@
       {% if c.engine_status == 'unknown' %}<span class="chip flag">Engine not confirmed</span>{% endif %}
       {% for f in c.flags %}<span class="chip flag">{{ f }}</span>{% endfor %}
     </div>
+    {% if c.value_note %}<p class="note">Value: {{ c.value_note }}</p>{% endif %}
     <ul class="why">{% for r in c.reasons %}<li>{{ r }}</li>{% endfor %}{% for r in c.score_reasons %}<li>{{ r }}</li>{% endfor %}</ul>
     <div class="links">{% for l in c.links %}<a href="{{ l.url }}" target="_blank" rel="noopener">Open on {{ l.name }}</a>{% endfor %}</div>
     <div class="actions">

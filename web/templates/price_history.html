@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="panel">
+  <h2>Price changes</h2>
+  <p>Cars whose price has changed since the tracker first saw them, newest change first. Japan imports show the landed estimate, which can move a little with the exchange rate.</p>
+  {% if not items %}<p class="empty">No price changes yet. They appear here as sellers cut or raise prices.</p>{% endif %}
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Car</th><th>Prices</th><th>Change</th></tr>
+    {% for i in items %}
+    <tr>
+      <td><a href="{{ i.url }}" target="_blank" rel="noopener">{{ i.title }}</a><br><span class="muted">{{ i.source_name }}{% if i.status in ('removed','sold') %} · {{ i.status }}{% endif %}{% if i.in_scope %} · match{% endif %}</span></td>
+      <td>{% for p in i.points %}{{ p.price | money }} <span class="muted">({{ p.date }})</span>{% if not loop.last %} → {% endif %}{% endfor %}</td>
+      <td class="{{ 'v-good' if i.change is not none and i.change < 0 else 'v-bad' }}">{% if i.change is not none %}{{ '%+.0f' % i.change }}%{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+{% endblock %}

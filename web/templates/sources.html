@@ -10,7 +10,7 @@
     {% endfor %}
   </table>
   {% for u in updates %}<p class="note">{{ u }}</p>{% endfor %}
-  <p class="note">If a site shows "Needs attention", there is nothing you need to do. The others keep working, and the maintainer can fix the site remotely. If asked, press the button below and send the maintainer the file it saves.</p>
+  <p class="note">If a site shows "Needs attention" or "Slow", there is nothing you need to do. Some sites block automatic checks; the tracker backs off politely and keeps trying, and the others keep working. The maintainer can fix a changed site remotely. If asked, press the button below and send the maintainer the file it saves.</p>
   <form method="post" action="/problem-report"><button>Save a problem report</button></form>
 </div>
 {% endblock %}

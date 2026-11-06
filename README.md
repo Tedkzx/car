@@ -1,6 +1,6 @@
 # SX200 Tracker
 
-Finds factory-SR20DET Nissan 200SX and Silvia cars for sale in the UK, ranks them stock-first, and alerts the owner's phone. Built from the "Nissan 200SX Listing Tracker: Build Spec" (6 Nov 2026). This is **milestone 2 plus the Japan export part of milestone 4** (version 0.3.0).
+Finds factory-SR20DET Nissan 200SX and Silvia cars for sale in the UK, ranks them stock-first, and alerts the owner's phone. Built from the "Nissan 200SX Listing Tracker: Build Spec" (6 Nov 2026). Version 0.5.0: milestones 1 and 2, milestone 3's market-based scoring, the Japan export part of milestone 4, and eBay through its official API.
 
 ## For the owner (under 5 minutes)
 
@@ -83,6 +83,19 @@ tests/          labelled listings, holdout set, unit, pipeline and web tests
 | Scraper fixes reach running installs without a reinstall | Done and tested with a fake server: `recipes/manifest.json` + SHA-256 per file, only recipe files accepted. **Needs a public repository** (see below) |
 | App auto-update | Done: checks the latest GitHub release daily, verifies the installer's SHA-256, installs silently at next start and restarts. **Needs public releases** |
 | Browser sources every 30-60 minutes | Done, per-recipe `min_interval_minutes` |
+
+## Milestone 3 status (scoring)
+
+| Check | Status |
+| --- | --- |
+| Every card shows its score reasons in plain words | Done |
+| A stock car outranks a heavily modified one | Done, tested |
+| Value score switches from provisional to median-based after 8 comparables | Done, tested. Cohort = generation + market + mod tier, last 180 days, removed and sold cars included |
+| Price history | "Price changes" tab |
+| Shortlist, ignore, notes | Done since milestone 1 |
+| Still provisional | Seed price bands (used until 8 comparables) are rough guesses; condition and scam flags read the ad text only (the MOT API is off) |
+
+"New" lists only matches inside the budget (landed cost for imports). Matches outside it stay under All active, In Japan and Everything found.
 
 ## Milestone 4 status (Japan exports)
 

@@ -116,7 +116,7 @@ def test_crashing_collector_is_isolated(monkeypatch):
     assert res.per_source["gumtree"].startswith("error")
     assert len(sent.ntfy) == 1
     b = health.banner(db, p.recipes, p.enabled_sources(), 20)
-    assert b["text"] == "1 of 2 sources working, 1 being repaired"
+    assert b["text"] == "1 of 2 sources working, 1 unavailable right now"
 
 
 def test_same_plate_on_two_sources_is_one_car():

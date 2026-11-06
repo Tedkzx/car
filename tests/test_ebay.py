@@ -80,7 +80,7 @@ def test_without_a_key_ebay_shows_off_not_a_fault(monkeypatch):
     b = health.banner(db, p.recipes, p.enabled_sources(), 20)
     ebay = next(s for s in b["sources"] if s["name"] == "ebay")
     assert ebay["label"] == "Off" and "free eBay key" in ebay["detail"]
-    assert "being repaired" not in b["text"] or "1 being repaired" in b["text"]
+    assert b["text"] == "1 of 1 sources working"  # an Off source is not counted as a fault
 
 
 def test_with_a_key_ebay_cars_flow_through_the_matcher_and_alert(monkeypatch):

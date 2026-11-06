@@ -94,6 +94,8 @@ def car_cards(db: DB, recipes: dict, view: str, budget: dict) -> list[dict]:
         main = listings[0]
         images = loads(main["image_urls"], [])
         price = main["landed_cost_gbp"] or main["price_gbp"]
+        if view == "new" and not (price is not None and budget["min_gbp"] <= price <= budget["max_gbp"]):
+            continue  # "New" is for cars he could buy: matches outside the budget live in All active / In Japan
         cards.append({
             "id": c["id"], "title": main["title"], "price": price,
             "in_budget": price is not None and budget["min_gbp"] <= price <= budget["max_gbp"],
@@ -111,6 +113,7 @@ def car_cards(db: DB, recipes: dict, view: str, budget: dict) -> list[dict]:
             "landed": loads(main["landed_breakdown"]) if main["landed_cost_gbp"] else None,
             "asking_gbp": main["price_gbp"], "price_original": main["price_original"], "currency": main["currency"],
             "fx_date": main["fx_date"],
+            "value_note": next((r for r in loads(c["score_reasons"], []) if "usual" in r), None),
         })
     return cards
 
@@ -259,6 +262,29 @@ def create_app(state: AppState) -> FastAPI:
                           "source_name": state.pipeline.recipes[r["source"]].display_name
                           if r["source"] in state.pipeline.recipes else r["source"]})
         return tpl.TemplateResponse(request, "everything.html", ctx(request, view="everything", items=items, show=show))
+
+    @app.get("/price-history", response_class=HTMLResponse)
+    def price_history(request: Request):
+        rows = state.db.query(
+            "SELECT li.id, li.title, li.url, li.source, li.status, li.currency, c.in_scope FROM listings li "
+            "JOIN car_listings cl ON cl.listing_id=li.id JOIN cars c ON c.id=cl.car_id "
+            "WHERE c.reasons NOT LIKE '%Excluded:%' AND "
+            "(SELECT COUNT(DISTINCT price_gbp) FROM price_history ph WHERE ph.listing_id=li.id) > 1 "
+            "ORDER BY (SELECT MAX(seen_at) FROM price_history ph WHERE ph.listing_id=li.id) DESC LIMIT 200")
+        items = []
+        for r in rows:
+            points, last = [], None
+            for ph in state.db.query("SELECT seen_at, price_gbp FROM price_history WHERE listing_id=? ORDER BY seen_at",
+                                     (r["id"],)):
+                if ph["price_gbp"] != last:
+                    points.append({"date": ph["seen_at"][:10], "price": ph["price_gbp"]})
+                    last = ph["price_gbp"]
+            first, latest = points[0]["price"], points[-1]["price"]
+            change = (latest - first) / first * 100 if first and latest else None
+            items.append({**dict(r), "points": points, "change": change,
+                          "source_name": state.pipeline.recipes[r["source"]].display_name
+                          if r["source"] in state.pipeline.recipes else r["source"]})
+        return tpl.TemplateResponse(request, "price_history.html", ctx(request, view="prices", items=items))
 
     @app.get("/duplicates", response_class=HTMLResponse)
     def duplicates(request: Request):

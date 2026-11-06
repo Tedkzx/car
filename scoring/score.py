@@ -52,21 +52,26 @@ class Score:
     hard_flags: list[str] = field(default_factory=list)
     scam_flags: list[str] = field(default_factory=list)
     value_provisional: bool = True
+    comparables: int = 0
 
 
-def score(listing: Listing, match: Match, weights: dict) -> Score:
+def mod_tier(text: str) -> tuple[str, float]:
+    if MOD_HEAVY.search(text):
+        return "heavy", 0.1
+    if MOD_MEDIUM.search(text):
+        return "medium", 0.4
+    if MOD_LIGHT.search(text) and not re.search(r"\bno mods\b|\bunmodified\b", text, re.I):
+        return "light", 0.7
+    return "stock", 0.85
+
+
+def score(listing: Listing, match: Match, weights: dict, market_lookup=None) -> Score:
+    """market_lookup(generation, market, mod_tier) -> (median price or None, number of comparables)."""
     text = listing.text
     reasons: list[str] = []
 
     # Stock-ness and mod tier.
-    if MOD_HEAVY.search(text):
-        tier, stock = "heavy", 0.1
-    elif MOD_MEDIUM.search(text):
-        tier, stock = "medium", 0.4
-    elif MOD_LIGHT.search(text) and not re.search(r"\bno mods\b|\bunmodified\b", text, re.I):
-        tier, stock = "light", 0.7
-    else:
-        tier, stock = "stock", 0.85
+    tier, stock = mod_tier(text)
     if STOCK_POS.search(text) and tier in ("stock", "light"):
         stock = min(1.0, stock + 0.15)
         reasons.append("Ad says the car is standard or original")
@@ -87,15 +92,22 @@ def score(listing: Listing, match: Match, weights: dict) -> Score:
 
     # Value against a seed band (provisional until there are comparables).
     value = 0.5
-    median = SEED_MEDIAN.get(match.generation, SEED_MEDIAN["unknown"])
+    median, comparables = (market_lookup(match.generation, match.market, tier) if market_lookup else (None, 0))
+    provisional = median is None
+    if provisional:
+        median = SEED_MEDIAN.get(match.generation, SEED_MEDIAN["unknown"])
+    basis = (f"provisional: only {comparables} similar cars seen so far" if provisional
+             else f"compared with {comparables} similar cars, typical price £{median:,.0f}")
     price = listing.effective_price
     if price:
         ratio = price / median
         value = max(0.0, min(1.0, 1.25 - ratio * 0.75))
         if ratio < 0.85:
-            reasons.append(f"Cheaper than the usual price for an {match.generation} (provisional)")
-        elif ratio > 1.25:
-            reasons.append(f"Dearer than the usual price for an {match.generation} (provisional)")
+            reasons.append(f"Cheaper than usual for this kind of {match.generation} ({basis})")
+        elif ratio > 1.15:
+            reasons.append(f"Dearer than usual for this kind of {match.generation} ({basis})")
+        else:
+            reasons.append(f"About the usual price ({basis})")
 
     service = 1.0 if SERVICE.search(text) else 0.4
     if service == 1.0:
@@ -118,4 +130,4 @@ def score(listing: Listing, match: Match, weights: dict) -> Score:
         scam.append("Mentions deposits, couriers, shipping or a seller abroad")
     if price and price < 0.6 * median and match.in_scope and not listing.landed_cost_gbp:
         scam.append(f"Price is far below the usual price for an {match.generation}")
-    return Score(round(s), tier, reasons, hard, scam)
+    return Score(round(s), tier, reasons, hard, scam, provisional, comparables)

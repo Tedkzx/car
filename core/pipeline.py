@@ -20,6 +20,7 @@ from enrich.fx import FX
 from enrich.geo import Geo
 from enrich.landed_cost import landed_cost
 from scoring.score import score as score_listing
+from scoring.value import cohort_median
 
 from . import dedupe, health
 from .db import DB, dumps, loads, now
@@ -190,8 +191,9 @@ class Pipeline:
             return lid
         if match.excluded == "sold":
             self.db.execute("UPDATE listings SET status='sold' WHERE id=?", (lid,))
-        sc = score_listing(listing, match, cfg["scoring"]["weights"])
         car_id, car_is_new = self._car_for(lid, listing)
+        sc = score_listing(listing, match, cfg["scoring"]["weights"],
+                           market_lookup=lambda g, m, t: cohort_median(self.db, g, m, t, exclude_car=car_id))
         flags = sc.hard_flags + sc.scam_flags
         self.db.execute(
             "UPDATE cars SET generation=?, engine_status=?, market=?, confidence=?, reasons=?, in_scope=?, mod_tier=?, "
