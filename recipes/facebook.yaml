@@ -1,0 +1,16 @@
+# Facebook Marketplace, opt-in and off by default (spec sections 2, 4, 13).
+# The owner logs in once in the tracker's own Edge window (Settings > Facebook). At most hourly,
+# one search per term in that profile. Stops at any login page or checkpoint and tells the owner.
+# UNVERIFIED until a real logged-in page has been captured (SX200Tracker-cli.exe --capture facebook).
+name: facebook
+display_name: Facebook Marketplace
+group: uk_marketplace
+status: unverified
+min_app_version: "0.9.0"
+method: api
+adapter: facebook
+country: uk
+min_interval_minutes: 60
+terms: [nissan 200sx, nissan silvia]
+searches: [api]
+extract: [api]

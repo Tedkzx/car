@@ -74,6 +74,21 @@ class Pipeline:
             out.append(name)
         return out
 
+    def _facebook_needs_login(self, message: str) -> None:
+        """Something the owner can fix: one plain phone message a day at most (spec section 10)."""
+        from alerts.notifier import Alert
+        from collectors.facebook import NEEDS_LOGIN
+
+        if message != NEEDS_LOGIN:
+            return
+        today = datetime.now(timezone.utc).date().isoformat()
+        if self.db.get_meta("facebook_login_alert") == today:
+            return
+        self.db.set_meta("facebook_login_alert", today)
+        self.notifier.send(Alert("owner_action", "Facebook needs you to log in",
+                                 "Open the tracker on the PC: Settings, then Facebook, then Log in. "
+                                 "Until then the other sites keep working.", None, None, ["key"], 3))
+
     def reload_recipes(self) -> None:
         self.recipes = engine.load_recipes()
 
@@ -124,6 +139,8 @@ class Pipeline:
         try:
             raws = engine.run_recipe(recipe, cfg, fetcher=fetcher, browser=browser, save_raw=save_raw)
         except engine.BlockedError as e:
+            if name == "facebook":
+                self._facebook_needs_login(str(e))
             tripped = health.record_failure(self.db, name, str(e), blocked=True)
             res.per_source[name] = f"blocked: {e}"
             if tripped:

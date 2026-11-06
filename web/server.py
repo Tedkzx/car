@@ -400,6 +400,17 @@ def create_app(state: AppState) -> FastAPI:
             disabled=set(state.cfg()["sources"].get("disabled") or []),
             ebay_key=(cid[:6] + "…") if cid else None))
 
+    @app.post("/facebook-login", response_class=HTMLResponse)
+    def facebook_login():
+        import threading
+
+        from collectors.facebook import FacebookBrowser
+
+        threading.Thread(target=FacebookBrowser(headless=False).open_login_window, name="facebook-login",
+                         daemon=True).start()
+        return HTMLResponse('<span class="saved">An Edge window is opening on Facebook. Log in there (tick '
+                            '"remember me" if asked), then close that window. The tracker keeps the login.</span>')
+
     @app.post("/ebay-test", response_class=HTMLResponse)
     def ebay_test():
         from collectors import ebay_api
@@ -431,8 +442,10 @@ def create_app(state: AppState) -> FastAPI:
                 "08:30" if key == "digest_time" else None)
         cfg["alerts"]["maintainer_ntfy_topic"] = re.sub(r"[^A-Za-z0-9_-]", "", str(form.get("maintainer_topic", "")))[:64]
         cfg["target"]["include_180sx"] = form.get("include_180sx") == "on"
+        cfg["sources"]["facebook"] = form.get("facebook_on") == "on"
         cfg["target"]["alert_swaps"] = form.get("alert_swaps") == "on"
-        cfg["sources"]["disabled"] = [n for n in state.pipeline.recipes if form.get(f"src_{n}") != "on"]
+        cfg["sources"]["disabled"] = [n for n in state.pipeline.recipes
+                                      if n != "facebook" and form.get(f"src_{n}") != "on"]
         from collectors import ebay_api
 
         if form.get("ebay_remove") == "on":

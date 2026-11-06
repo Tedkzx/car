@@ -99,4 +99,4 @@ def test_everything_found_explains_each_decision():
     html = TestClient(create_app(state)).get("/everything").text
     assert "1997 NISSAN 180SX Kouki Type X" in html and "excluded by your settings" in html
     assert "Needs a look" in html and "Not a match" in html
-    assert "of them were a 200SX, Silvia or 180SX" in TestClient(create_app(state)).get("/sources").text
+    assert "200SX, Silvia or 180SX ads on file from this site" in TestClient(create_app(state)).get("/sources").text

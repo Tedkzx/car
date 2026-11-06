@@ -16,6 +16,7 @@ One line per source: status, last checked, method. Add a line whenever a search 
 | Japan Car Imports UK (Wellingborough) | Not added | 2026-11-06 | | Approved, but its showroom is mostly European cars and its list gives no prices, so cars cannot be judged against the budget |
 | JICS Motors (Maidenhead) | Not added | 2026-11-06 | | Approved, but its website's security certificate is broken; the tracker never skips that check |
 | DCY Europe (York) | Covered | 2026-11-06 | | Its stock comes through Exchange & Mart |
+| Facebook Marketplace | Unverified, opt-in, off by default | 2026-11-06 | Owner's logged-in Edge profile, hourly | Like the CarSnipe browser extension: reads the first screen of one search per term in the tracker's own Edge profile. Stops at any login or checkpoint and sends the owner one message a day. Parser reads tiles by shape (links to /marketplace/item/), not Facebook's class names. Verify with `--capture facebook` once logged in |
 | Goo-net Exchange (Japan) | Verified | 2026-11-06 | HTTP, CSS, form paging | About 235 Silvias plus 180SXs. Titles carry the trim (Spec-R, K's, Q's), so the engine can be confirmed. Yen FOB prices, landed cost applied |
 | SBT Japan | Verified | 2026-11-06 | HTTP, CSS | 50 Silvias a page. Chassis code but rarely the trim, so most go to "Needs a look". USD FOB |
 | Car From Japan | Verified | 2026-11-06 | HTTP, CSS | 25 a page. "Grade R" means Spec-R. USD FOB |

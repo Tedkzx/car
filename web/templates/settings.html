@@ -40,10 +40,17 @@
 
   <label>Sites to check</label>
   <div class="check">
-    {% for name, r in recipes.items() %}
+    {% for name, r in recipes.items() if name != 'facebook' %}
     <label><input type="checkbox" name="src_{{ name }}" {{ '' if name in disabled else 'checked' }}> {{ r.display_name }}{% if r.status != 'verified' %} <span class="muted">(being set up)</span>{% endif %}</label>
     {% endfor %}
   </div>
+
+  <details style="margin-top:18px"><summary>Facebook Marketplace (optional)</summary>
+    <p class="warn" style="font-size:16px"><strong>Read this first.</strong> Facebook's rules do not allow automatic reading of Marketplace, so Facebook could restrict the account the tracker uses. A spare account is safer than your main one. The tracker searches at most once an hour, only reads the first screen of results, and stops (and tells you) if Facebook asks you to log in or confirm it is you.</p>
+    <div class="check"><label><input type="checkbox" name="facebook_on" {{ 'checked' if cfg.sources.facebook }}> Search Facebook Marketplace</label></div>
+    <p><button type="button" hx-post="/facebook-login" hx-target="#fbmsg">Log in to Facebook</button> <span id="fbmsg"></span></p>
+    <p class="note">Logging in opens Edge with the tracker's own profile, separate from your normal browser. Set your Marketplace location and a wide radius in Facebook itself; the tracker searches from there.</p>
+  </details>
 
   <details style="margin-top:18px" {{ 'open' if not ebay_key }}><summary>eBay (optional, free key)</summary>
     {% if ebay_key %}<p class="saved">An eBay key is saved ({{ ebay_key }}).</p>

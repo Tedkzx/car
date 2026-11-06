@@ -104,7 +104,7 @@ Daily digest (default 08:30, sent on the first check after if the PC was off) li
 | Check | Status |
 | --- | --- |
 | "Paste a link" box (on the New tab) | Done. Reads the ad page (JSON-LD, Open Graph, price in the text) and runs the matcher, flags, score and landed cost. If the site refuses automatic reading (Autotrader, eBay), the owner types the title and price instead. Pasted cars never alert |
-| Facebook opt-in | Not built. Facebook Marketplace and group ads can go through the paste box meanwhile |
+| Facebook opt-in | Built, off by default (Settings > Facebook): plain ban-risk warning, one-time login in the tracker's own Edge window, one search per term at most hourly, stops at any login or checkpoint and tells the owner once a day. Unverified until a real page is captured (`--capture facebook`) |
 | Forums | 350Z-UK (RSS). Driftworks blocked; Zilvia is US-based |
 
 ## Milestone 4 status (Japan exports)

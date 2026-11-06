@@ -610,6 +610,10 @@ def run_recipe(recipe: Recipe, cfg: dict, fetcher: HttpFetcher | None = None, br
             from . import ebay_api
 
             return ebay_api.run(data, cfg)
+        if data["adapter"] == "facebook":
+            from . import facebook
+
+            return facebook.run(data, cfg)
         raise CollectorError(f"Unknown adapter {data['adapter']!r}")
     fetcher = fetcher or HttpFetcher()
     results: dict[str, dict] = {}

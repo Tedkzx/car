@@ -28,6 +28,8 @@ def capture(source: str) -> str:
     if source not in recipes:
         return f"No recipe called {source!r}. Known: {', '.join(sorted(recipes))}"
     recipe = recipes[source]
+    if source == "facebook":
+        return _capture_facebook()
     urls = engine.search_urls(recipe.data, config.load())
     if not urls:
         return "That recipe has no search pages."
@@ -57,3 +59,28 @@ def capture(source: str) -> str:
         f"Saved {out} ({len(html):,} characters). The recipe found {len(items)} listings on it.\n"
         "Send this file to the maintainer with a problem report if the number looks wrong."
     )
+
+
+def _capture_facebook() -> str:
+    """Saves one Marketplace results page from the tracker's logged-in Facebook profile."""
+    from urllib.parse import quote_plus
+
+    from .facebook import SEARCH, FacebookBrowser, is_login_or_checkpoint, parse_results
+
+    fb = FacebookBrowser()
+    pw, ctx = fb._launch(headless=True)
+    try:
+        page = ctx.new_page()
+        page.goto(SEARCH.format(q=quote_plus("nissan 200sx"), lo=1000, hi=50000), wait_until="domcontentloaded")
+        page.wait_for_timeout(8000)
+        html, url = page.content(), page.url
+    finally:
+        ctx.close()
+        pw.stop()
+    if is_login_or_checkpoint(url, html):
+        return "Facebook wants a login. Use Settings > Facebook > Log in first. Nothing saved."
+    out_dir = paths.data_dir() / "recipes" / "fixtures"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / "facebook.html"
+    out.write_text(scrub(html), encoding="utf-8")
+    return f"Saved {out}. The tracker read {len(parse_results(html))} listings from it. Send this file to the maintainer."
