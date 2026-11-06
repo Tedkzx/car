@@ -63,15 +63,14 @@ def capture(source: str) -> str:
 
 def _capture_facebook() -> str:
     """Saves one Marketplace results page from the tracker's logged-in Facebook profile."""
-    from urllib.parse import quote_plus
+    from .facebook import FacebookBrowser, is_login_or_checkpoint, parse_results, search_url
 
-    from .facebook import SEARCH, FacebookBrowser, is_login_or_checkpoint, parse_results
-
+    area = config.load().get("sources", {}).get("facebook_area", "")
     fb = FacebookBrowser()
     pw, ctx = fb._launch(headless=True)
     try:
         page = ctx.new_page()
-        page.goto(SEARCH.format(q=quote_plus("nissan 200sx"), lo=1000, hi=50000), wait_until="domcontentloaded")
+        page.goto(search_url("nissan 200sx", 1000, 50000, area), wait_until="domcontentloaded")
         page.wait_for_timeout(8000)
         html, url = page.content(), page.url
     finally:

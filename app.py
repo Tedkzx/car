@@ -136,8 +136,13 @@ def main(argv: list[str] | None = None) -> int:
         return 1 if bad else 0
     if args.capture:
         from collectors.capture import capture
+        from collectors.recipe_engine import CollectorError
 
-        print(capture(args.capture))
+        try:
+            print(capture(args.capture))
+        except CollectorError as e:  # plain words, never a traceback
+            print(f"Could not capture {args.capture}: {e}")
+            return 1
         return 0
 
     from core.winsys import SingleInstance

@@ -25,7 +25,24 @@ from core import paths
 from .recipe_engine import BlockedError, CollectorError
 
 log = logging.getLogger(__name__)
-SEARCH = "https://www.facebook.com/marketplace/search/?query={q}&minPrice={lo}&maxPrice={hi}&exact=false"
+VEHICLES = "546583916084032"  # Marketplace's Vehicles category
+SEARCH = ("https://www.facebook.com/marketplace/{area}search/?query={q}&minPrice={lo}&maxPrice={hi}"
+          f"&category_id={VEHICLES}&exact=false")
+PROFILE_IN_USE = "The Facebook window is still open. Close it, then try again"
+
+
+def area_slug(value: str | None) -> str:
+    """'nottingham', or a pasted Marketplace link like .../marketplace/nottingham/search/... -> 'nottingham'."""
+    v = (value or "").strip().lower()
+    m = re.search(r"/marketplace/([a-z0-9-]+)/", v)
+    if m and m.group(1) not in ("search", "item", "category", "you", "create"):
+        return m.group(1)
+    return v if re.fullmatch(r"[a-z0-9-]{2,60}", v) else ""
+
+
+def search_url(term: str, lo: int, hi: int, area: str = "") -> str:
+    slug = area_slug(area)
+    return SEARCH.format(area=f"{slug}/" if slug else "", q=quote_plus(term), lo=lo, hi=hi)
 LOGIN_URL = "https://www.facebook.com/login"
 NEEDS_LOGIN = "Facebook needs you to log in again: Settings, then Facebook, then Log in"
 
@@ -94,10 +111,12 @@ class FacebookBrowser:
                                                         locale="en-GB", viewport={"width": 1280, "height": 900})
         except Exception as e:
             pw.stop()
+            if "exitCode=21" in str(e):  # Chromium's "profile in use": the login window is still open
+                raise CollectorError(PROFILE_IN_USE) from e
             raise CollectorError("Microsoft Edge could not be opened on this PC") from e
         return pw, ctx
 
-    def search(self, terms: list[str], lo: int, hi: int) -> list[dict]:
+    def search(self, terms: list[str], lo: int, hi: int, area: str = "") -> list[dict]:
         if not self._lock.acquire(blocking=False):
             raise CollectorError("The Facebook window is open for logging in; trying again later")
         try:
@@ -106,8 +125,7 @@ class FacebookBrowser:
                 found: dict[str, dict] = {}
                 page = ctx.new_page()
                 for term in terms:
-                    page.goto(SEARCH.format(q=quote_plus(term), lo=lo, hi=hi), wait_until="domcontentloaded",
-                              timeout=45000)
+                    page.goto(search_url(term, lo, hi, area), wait_until="domcontentloaded", timeout=45000)
                     time.sleep(random.uniform(5, 9))  # let the tiles render, as a person would wait
                     html = page.content()
                     if is_login_or_checkpoint(page.url, html):
@@ -148,4 +166,5 @@ def run(recipe_data: dict, cfg: dict, browser: FacebookBrowser | None = None) ->
         raise CollectorError("Off: Facebook Marketplace is switched off in Settings")
     s = cfg.get("search", {})
     return (browser or FacebookBrowser()).search(recipe_data.get("terms", []), int(s.get("price_min_gbp", 8000)),
-                                                 int(s.get("price_max_gbp", 25000)))
+                                                 int(s.get("price_max_gbp", 25000)),
+                                                 cfg.get("sources", {}).get("facebook_area", ""))

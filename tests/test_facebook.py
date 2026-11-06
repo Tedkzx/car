@@ -40,7 +40,7 @@ class FakeFB:
     def __init__(self, result=None, error=None):
         self.result, self.error = result, error
 
-    def search(self, terms, lo, hi):
+    def search(self, terms, lo, hi, area=""):
         if self.error:
             raise self.error
         return self.result
@@ -82,3 +82,51 @@ def test_settings_show_warning_and_toggle(monkeypatch):
     assert "could restrict the account" in page and "Log in to Facebook" in page
     c.post("/settings", data={"facebook_on": "on", "src_pistonheads": "on"})
     assert state.cfg()["sources"]["facebook"] is True and "facebook" not in state.cfg()["sources"]["disabled"]
+
+
+def test_search_url_uses_area_and_vehicles_category():
+    url = facebook.search_url("nissan 200sx", 8000, 25000, "nottingham")
+    assert url.startswith("https://www.facebook.com/marketplace/nottingham/search/?query=nissan+200sx")
+    assert "category_id=546583916084032" in url and "minPrice=8000" in url and "maxPrice=25000" in url
+    pasted = ("https://www.facebook.com/marketplace/nottingham/search/?category_id=546583916084032"
+              "&query=Vehicles&referral_ui_component=category_menu_item")
+    assert facebook.area_slug(pasted) == "nottingham" and facebook.area_slug("Nottingham ") == "nottingham"
+    assert facebook.search_url("x", 1, 2).startswith("https://www.facebook.com/marketplace/search/?")
+
+
+def test_open_login_window_gives_a_plain_message(monkeypatch):
+    class PW:
+        def __init__(self):
+            self.chromium = self
+
+        def start(self):
+            return self
+
+        def stop(self):
+            pass
+
+        def launch_persistent_context(self, *a, **k):
+            raise RuntimeError("Target closed ... <process did exit: exitCode=21, signal=null>")
+
+    import sys
+    import types
+
+    mod = types.ModuleType("playwright.sync_api")
+    mod.sync_playwright = lambda: PW()
+    monkeypatch.setitem(sys.modules, "playwright.sync_api", mod)
+    try:
+        facebook.FacebookBrowser()._launch(True)
+    except engine.CollectorError as e:
+        assert str(e) == facebook.PROFILE_IN_USE
+    else:
+        raise AssertionError("expected an error")
+
+
+def test_settings_save_marketplace_area_from_a_pasted_link(monkeypatch):
+    p, db, sent, cfg = make({"pistonheads": [(200, "")]})
+    state = AppState(db, p, FakeScheduler(), Notifier(lambda: cfg, sent.ntfy_send, sent.toast_send))
+    state._cfg["setup_complete"] = True
+    c = TestClient(create_app(state))
+    c.post("/settings", data={"facebook_on": "on", "src_pistonheads": "on",
+                              "facebook_area": "https://www.facebook.com/marketplace/nottingham/search/?query=Vehicles"})
+    assert state.cfg()["sources"]["facebook_area"] == "nottingham"
