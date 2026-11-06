@@ -19,7 +19,7 @@ import webbrowser
 
 from core import paths
 
-VERSION = "0.3.0"
+from core.version import VERSION  # noqa: E402
 PREFERRED_PORT = 8765
 log = logging.getLogger("sx200")
 

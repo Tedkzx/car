@@ -5,6 +5,7 @@ name: goonet
 display_name: Goo-net Exchange (Japan)
 group: japan_export
 status: verified
+min_app_version: "0.3.0"   # needs currency conversion and landed cost
 method: http
 country: japan
 currency: JPY

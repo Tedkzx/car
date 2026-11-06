@@ -37,7 +37,7 @@ jobs:
         id: v
         shell: bash
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT; else echo "version=$(grep -oP 'VERSION = "\K[^"]+' app.py)" >> $GITHUB_OUTPUT; fi
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT; else echo "version=$(grep -oP 'VERSION = "\K[^"]+' core/version.py)" >> $GITHUB_OUTPUT; fi
       - name: Bundle with PyInstaller
         run: pyinstaller installer/sx200.spec --noconfirm
       - name: Bundle self-test (recipes load and parse their saved pages)

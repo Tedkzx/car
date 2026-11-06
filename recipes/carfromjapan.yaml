@@ -6,6 +6,7 @@ name: carfromjapan
 display_name: Car From Japan
 group: japan_export
 status: verified
+min_app_version: "0.3.0"   # needs currency conversion and landed cost
 method: http
 country: japan
 currency: USD

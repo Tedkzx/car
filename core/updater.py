@@ -1,6 +1,8 @@
 """Recipe hot-update and app auto-update from the project's GitHub repository (spec sections 5, 11, 13).
 
-Recipes: recipes/manifest.json lists every recipe file with its SHA-256. Changed files are
+Recipes: recipes/manifest-v3.json lists every recipe file with its SHA-256 and the app version
+it needs (recipes/manifest.json is the frozen list read by version 0.2.x, holding only recipes
+that version can handle). Changed files are
 downloaded into %APPDATA%\\SX200Tracker\\recipes\\ (which overrides the shipped copies) only
 after their checksum matches. Recipes are data, never code.
 
@@ -33,7 +35,7 @@ def sha256(data: bytes) -> str:
 
 
 def version_tuple(v: str) -> tuple[int, ...]:
-    return tuple(int(x) for x in re.findall(r"\d+", v)[:3]) or (0,)
+    return tuple(int(x) for x in re.findall(r"\d+", str(v or "0"))[:3]) or (0,)
 
 
 class Updater:
@@ -63,7 +65,7 @@ class Updater:
             return 0
         base = f"https://raw.githubusercontent.com/{s['repo']}/{s['branch']}/recipes/"
         try:
-            r = self.client().get(base + "manifest.json")
+            r = self.client().get(base + "manifest-v3.json")
             if r.status_code != 200:
                 self._status("recipes", f"Scraper fixes not reachable (status {r.status_code})")
                 return 0
@@ -73,7 +75,10 @@ class Updater:
             return 0
         dest = paths.data_dir() / "recipes"
         changed = 0
+        requires = manifest.get("requires") or {}
         for name, digest in (manifest.get("files") or {}).items():
+            if version_tuple(requires.get(name)) > version_tuple(self.version):
+                continue  # needs a newer app; it arrives with the app update
             if not ALLOWED_RECIPE_FILE.match(name):
                 log.warning("manifest names an unexpected file %r; ignored", name)
                 continue
@@ -155,10 +160,32 @@ class Updater:
         self.db.set_meta(f"update_status_{kind}", text)
 
 
-def build_manifest(recipes_dir: Path) -> dict:
+def _requirements(recipes_dir: Path) -> dict[str, str]:
+    """Minimum app version per file: a recipe's min_app_version also applies to its fixture."""
+    import yaml
+
+    req = {}
+    for f in sorted(recipes_dir.glob("*.yaml")):
+        data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+        if data.get("min_app_version"):
+            req[f.name] = str(data["min_app_version"])
+            if data.get("fixture"):
+                req[data["fixture"]] = str(data["min_app_version"])
+    return req
+
+
+def build_manifest(recipes_dir: Path, for_version: str | None = None) -> dict:
+    """for_version: only files that app version can use (the frozen 0.2.x list). None: every file."""
+    req = _requirements(recipes_dir)
     files = {}
     for f in sorted(recipes_dir.rglob("*")):
         rel = f.relative_to(recipes_dir).as_posix()
-        if f.is_file() and ALLOWED_RECIPE_FILE.match(rel):
-            files[rel] = sha256(f.read_bytes())
-    return {"files": files}
+        if not (f.is_file() and ALLOWED_RECIPE_FILE.match(rel)):
+            continue
+        if for_version and version_tuple(req.get(rel)) > version_tuple(for_version):
+            continue
+        files[rel] = sha256(f.read_bytes())
+    out = {"files": files}
+    if not for_version:
+        out["requires"] = {k: v for k, v in req.items() if k in files}
+    return out

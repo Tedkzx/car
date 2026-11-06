@@ -79,6 +79,17 @@ class Recipe:
         return (self.path.parent / fx) if fx else None
 
 
+def version_tuple(v: str | None) -> tuple[int, ...]:
+    return tuple(int(x) for x in re.findall(r"\d+", str(v or "0"))[:3]) or (0,)
+
+
+def compatible(data: dict, app_version: str | None = None) -> bool:
+    from core.version import VERSION
+
+    need = data.get("min_app_version")
+    return not need or version_tuple(need) <= version_tuple(app_version or VERSION)
+
+
 def recipe_dirs() -> list[Path]:
     """Downloaded recipes (app data) override the ones shipped in the installer."""
     return [paths.data_dir() / "recipes", paths.bundle_dir() / "recipes"]
@@ -96,6 +107,9 @@ def load_recipes(dirs: Iterable[Path] | None = None) -> dict[str, Recipe]:
                 log.error("Recipe %s is not valid YAML: %s", f, e)
                 continue
             name = data.get("name") or f.stem
+            if not compatible(data):
+                log.info("Recipe %s needs app %s or later; skipped", name, data.get("min_app_version"))
+                continue
             if name not in found:  # first directory wins
                 found[name] = Recipe(name, data.get("display_name", name), data, f)
     return found

@@ -98,7 +98,7 @@ def test_recipe_hot_update_downloads_checked_files_only():
     fixed = (ROOT / "recipes/gumtree.yaml").read_text(encoding="utf-8").replace("display_name: Gumtree", "display_name: Gumtree (fixed)").encode()
     evil = b"name: x\n"
     manifest = {"files": {"gumtree.yaml": sha256(fixed), "pistonheads.yaml": "0" * 64, "../app.py": sha256(evil)}}
-    http = FakeHTTP({base + "manifest.json": json.dumps(manifest), base + "gumtree.yaml": fixed,
+    http = FakeHTTP({base + "manifest-v3.json": json.dumps(manifest), base + "gumtree.yaml": fixed,
                      base + "pistonheads.yaml": b"tampered", base + "../app.py": evil})
     db = DB(":memory:")
     up = Updater(db, lambda: config.DEFAULTS, "0.2.0", client=http)
@@ -117,9 +117,28 @@ def test_unreachable_update_source_is_reported_not_fatal():
     assert "not reachable" in db.get_meta("update_status_recipes")
 
 
-def test_manifest_is_up_to_date():
-    saved = json.loads((ROOT / "recipes/manifest.json").read_text(encoding="utf-8"))
-    assert saved == build_manifest(ROOT / "recipes"), "run: python tools/make_manifest.py"
+def test_manifests_are_up_to_date():
+    for name, version in (("manifest-v3.json", None), ("manifest.json", "0.2.0")):
+        saved = json.loads((ROOT / "recipes" / name).read_text(encoding="utf-8"))
+        assert saved == build_manifest(ROOT / "recipes", version), "run: python tools/make_manifest.py"
+
+
+def test_old_app_versions_never_receive_recipes_they_cannot_handle():
+    """0.2.0 read ¥ and US$ prices as pounds; the Japan recipes must not reach it."""
+    legacy = json.loads((ROOT / "recipes/manifest.json").read_text(encoding="utf-8"))["files"]
+    for name in ("goonet.yaml", "sbtjapan.yaml", "carfromjapan.yaml", "fixtures/goonet.html"):
+        assert name not in legacy
+    v3 = json.loads((ROOT / "recipes/manifest-v3.json").read_text(encoding="utf-8"))
+    assert v3["requires"]["goonet.yaml"] == "0.3.0"
+    # The 0.3.0 updater skips files that need a newer app, and the loader ignores them too.
+    base = "https://raw.githubusercontent.com/Tedkzx/car/main/recipes/"
+    future = b"name: future\nmin_app_version: 9.0.0\nsearches: [x]\nextract: []\n"
+    http = FakeHTTP({base + "manifest-v3.json": json.dumps({"files": {"future.yaml": sha256(future)},
+                                                             "requires": {"future.yaml": "9.0.0"}}),
+                     base + "future.yaml": future})
+    assert Updater(DB(":memory:"), lambda: config.DEFAULTS, "0.3.0", client=http).update_recipes() == 0
+    (paths.data_dir() / "recipes" / "future.yaml").write_bytes(future)
+    assert "future" not in engine.load_recipes()
 
 
 # ---- scheduling, health -----------------------------------------------------------------------
