@@ -25,6 +25,7 @@ jobs:
   windows:
     needs: test
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -56,7 +57,10 @@ jobs:
       - name: Silent install as this user, then check the files and the login entry
         shell: pwsh
         run: |
-          Start-Process dist\SX200-Tracker-Setup.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait
+          # Wait for the installer process only (-Wait would also wait for anything it starts).
+          $p = Start-Process dist\SX200-Tracker-Setup.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -PassThru
+          if (-not $p.WaitForExit(300000)) { throw "installer did not finish within 5 minutes" }
+          if ($p.ExitCode -ne 0) { throw "installer exit code $($p.ExitCode)" }
           $exe = "$env:LOCALAPPDATA\Programs\SX200 Tracker\SX200Tracker.exe"
           if (-not (Test-Path $exe)) { throw "not installed" }
           $run = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name SX200Tracker

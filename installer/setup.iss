@@ -40,7 +40,7 @@ Name: "{userprograms}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "SX200Tracker"; ValueData: """{app}\{#MyAppExe}"" --background"; Flags: uninsdeletevalue
 
 [Run]
-Filename: "{app}\{#MyAppExe}"; Description: "Start SX200 Tracker"; Flags: nowait postinstall
+Filename: "{app}\{#MyAppExe}"; Description: "Start SX200 Tracker"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM {#MyAppExe}"; Flags: runhidden; RunOnceId: "StopTracker"
