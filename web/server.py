@@ -424,6 +424,11 @@ def create_app(state: AppState) -> FastAPI:
         cfg["alerts"]["alert_min_score"] = max(0, min(100, int(_money(form.get("min_score"), 60))))
         cfg["alerts"]["ntfy_enabled"] = form.get("ntfy_enabled") == "on"
         cfg["alerts"]["windows_enabled"] = form.get("windows_enabled") == "on"
+        cfg["alerts"]["digest_enabled"] = form.get("digest_enabled") == "on"
+        for key in ("digest_time", "quiet_start", "quiet_end"):
+            v = str(form.get(key, "")).strip()
+            cfg["alerts"][key] = v if re.fullmatch(r"([01]?\d|2[0-3]):[0-5]\d", v) else (
+                "08:30" if key == "digest_time" else None)
         cfg["alerts"]["maintainer_ntfy_topic"] = re.sub(r"[^A-Za-z0-9_-]", "", str(form.get("maintainer_topic", "")))[:64]
         cfg["target"]["include_180sx"] = form.get("include_180sx") == "on"
         cfg["target"]["alert_swaps"] = form.get("alert_swaps") == "on"

@@ -77,12 +77,35 @@ def car_alert(kind: str, car: dict, listing: dict, sources: list[dict], old_pric
 
 
 class Notifier:
-    def __init__(self, cfg_getter: Callable[[], dict], ntfy_send=ntfy.send, toast_send=windows_toast.send):
+    def __init__(self, cfg_getter: Callable[[], dict], ntfy_send=ntfy.send, toast_send=windows_toast.send, db=None,
+                 clock=None):
         self.cfg = cfg_getter
         self._ntfy = ntfy_send
         self._toast = toast_send
+        self.db = db  # when set, alerts during quiet hours wait in a queue
+        self._clock = clock
 
     def send(self, alert: Alert) -> bool:
+        from . import digest
+
+        if self.db is not None and alert.kind not in ("test", "owner_action") and \
+                digest.in_quiet_hours(self.cfg(), self._clock() if self._clock else None):
+            digest.queue_alert(self.db, alert)
+            return True
+        return self._deliver(alert)
+
+    def flush_quiet_queue(self) -> int:
+        """Send alerts held during quiet hours, once they are over."""
+        from . import digest
+
+        if self.db is None or digest.in_quiet_hours(self.cfg(), self._clock() if self._clock else None):
+            return 0
+        held = digest.take_queue(self.db)
+        for a in held:
+            self._deliver(Alert(**a))
+        return len(held)
+
+    def _deliver(self, alert: Alert) -> bool:
         a = self.cfg()["alerts"]
         ok = False
         if a.get("ntfy_enabled", True) and a.get("ntfy_topic"):

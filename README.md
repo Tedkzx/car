@@ -95,6 +95,8 @@ tests/          labelled listings, holdout set, unit, pipeline and web tests
 | Shortlist, ignore, notes | Done since milestone 1 |
 | Still provisional | Seed price bands (used until 8 comparables) are rough guesses; condition and scam flags read the ad text only (the MOT API is off) |
 
+Daily digest (default 08:30, sent on the first check after if the PC was off) lists in-budget near-misses: red flags, swaps, low scores, unconfirmed engines. Optional quiet hours hold alerts and send them when they end. Both are in Settings.
+
 "New" lists only matches inside the budget (landed cost for imports). Matches outside it stay under All active, In Japan and Everything found.
 
 ## Milestone 5 status

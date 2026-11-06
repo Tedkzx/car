@@ -22,6 +22,15 @@
     <label><input type="checkbox" name="ntfy_enabled" {{ 'checked' if cfg.alerts.ntfy_enabled }}> Phone alerts (ntfy)</label>
     <label><input type="checkbox" name="windows_enabled" {{ 'checked' if cfg.alerts.windows_enabled }}> Windows notifications on this PC</label>
   </div>
+  <div class="check" style="margin-top:8px">
+    <label><input type="checkbox" name="digest_enabled" {{ 'checked' if cfg.alerts.get('digest_enabled', True) }}> Daily digest at
+      <input type="time" name="digest_time" value="{{ cfg.alerts.digest_time or '08:30' }}" style="width:auto"></label>
+  </div>
+  <p class="note">One message a day listing cars inside your budget that were not worth an instant alert: red flags, engine swaps, low scores, or an engine still to confirm.</p>
+  <label>Quiet hours (optional)</label>
+  No alerts from <input type="time" name="quiet_start" value="{{ cfg.alerts.quiet_start or '' }}" style="width:auto">
+  to <input type="time" name="quiet_end" value="{{ cfg.alerts.quiet_end or '' }}" style="width:auto">
+  <p class="note">Alerts that arrive in quiet hours wait and are sent when they end. Leave empty to get alerts at any time.</p>
   <p><button type="button" hx-post="/test-alert" hx-target="#testmsg">Send a test alert</button> <span id="testmsg"></span></p>
   <details><summary>Phone set-up code</summary>
     <img src="/qr.svg" alt="QR code" width="180" height="180" style="background:#fff;padding:8px;border-radius:10px">

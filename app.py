@@ -59,7 +59,7 @@ def build():
 
     db = DB()
     holder: dict = {}
-    notifier = Notifier(lambda: holder["state"].cfg())
+    notifier = Notifier(lambda: holder["state"].cfg(), db=db)
     pipeline = Pipeline(db, lambda: holder["state"].cfg(), notifier, browser_factory=EdgeBrowser,
                         image_fetcher=default_image_fetcher())
     scheduler = Scheduler(
@@ -208,6 +208,7 @@ def maintenance(state, stop: threading.Event) -> None:
     """Scraper fixes every 6 hours, recipe self-tests and the app update check once a day."""
     from collectors import recipe_engine as engine
     from core import health
+    from alerts.digest import send_digest_if_due
     from core.updater import Updater
 
     upd = Updater(state.db, state.cfg, VERSION)
@@ -229,9 +230,12 @@ def maintenance(state, stop: threading.Event) -> None:
                     if failed:
                         state.notifier.maintainer(f"{r.display_name} self-test failed", msg)
                 upd.check_app()
+            # Every couple of minutes: release alerts held in quiet hours, send the daily digest when due.
+            state.notifier.flush_quiet_queue()
+            send_digest_if_due(state.db, state.cfg(), state.notifier, state.pipeline.recipes)
         except Exception:
             log.exception("maintenance step failed")
-        stop.wait(600)
+        stop.wait(120)
 
 
 def _start_after_setup(state, stop: threading.Event) -> None:

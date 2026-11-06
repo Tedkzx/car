@@ -22,6 +22,7 @@ DEFAULTS: dict[str, Any] = {
         "windows_enabled": True,
         "maintainer_ntfy_topic": "",
         "alert_min_score": 60,
+        "digest_enabled": True,
         "digest_time": "08:30",
         "quiet_start": None,
         "quiet_end": None,
