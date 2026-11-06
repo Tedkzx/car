@@ -1,0 +1,12 @@
+<div hx-get="/progress" hx-trigger="{{ 'every 2s' if p.running or not started else 'none' }}" hx-swap="outerHTML">
+{% if p.running %}
+  <p>Checking {{ p.current }}… ({{ p.done }} of {{ p.total }} sites)</p>
+  <div class="bar"><div style="width:{{ (100 * p.done / p.total) | int if p.total else 5 }}%"></div></div>
+{% elif started %}
+  <p><strong>First check finished.</strong></p>
+  <a class="btn primary" href="/">Open the dashboard</a>
+{% else %}
+  <p>Starting the first check…</p>
+  <div class="bar"><div style="width:3%"></div></div>
+{% endif %}
+</div>

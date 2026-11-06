@@ -1,0 +1,35 @@
+# PistonHeads classifieds. Verified against the live site on 6 Nov 2026.
+name: pistonheads
+display_name: PistonHeads
+group: uk_marketplace
+status: verified
+method: http
+country: uk
+searches:
+  # The make/model page lists every 200SX and Silvia (PistonHeads files them together).
+  - https://www.pistonheads.com/buy/nissan/200sx-silvia
+  # Keyword searches catch cars filed under the wrong model. The matcher removes the noise.
+  - https://www.pistonheads.com/buy/search?keywords={term}
+terms: [silvia, sr20det, s14, s15]
+paging: { max_pages: 1 }
+extract:
+  - type: json_script
+    selector: 'script#__NEXT_DATA__'
+    refs_root: props.pageProps.__APOLLO_STATE__
+    items: props.pageProps.__APOLLO_STATE__
+    key_prefix: 'Advert:'
+    fields:
+      id: id
+      title: headline
+      price: price
+      currency: currencyCode
+      year: year
+      mileage: specificationData.mileage
+      colour: specificationData.colour
+      location: seller.location      # seller name and phone are never read
+      seller_type: seller.sellerType
+      images: fullSizeImageUrls
+      url: { template: 'https://www.pistonheads.com/buy/listing/{id}' }
+fixture: fixtures/pistonheads.html
+fixture_url: https://www.pistonheads.com/buy/nissan/200sx-silvia
+fixture_min_items: 5

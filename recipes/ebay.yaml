@@ -1,0 +1,28 @@
+# eBay UK cars (category 9801), UK sellers only, newest first. No API key.
+# UNVERIFIED: eBay refused requests from the build machine (a cloud server), so this
+# recipe follows eBay's known result markup and has no saved page yet. On the owner's
+# PC run "SX200Tracker.exe --capture ebay" once to save a real page, then check it.
+name: ebay
+display_name: eBay UK
+group: uk_marketplace
+status: unverified
+method: http
+country: uk
+searches:
+  - https://www.ebay.co.uk/sch/i.html?_nkw={term}&_sacat=9801&LH_PrefLoc=1&_sop=10&_udlo={price_min}&_udhi={price_max}
+terms: [nissan 200sx, nissan silvia, nissan s14, nissan s15]
+paging: { max_pages: 1 }
+extract:
+  - type: css
+    # eBay has used both layouts during 2025-2026.
+    items: ['li.s-card', 'li.s-item']
+    fields:
+      title: ['.s-card__title .su-styled-text', '.s-card__title', '.s-item__title']
+      price: ['.s-card__price', '.s-item__price']
+      location: ['.s-card__attribute-row:has(.s-card__location)', '.s-item__location', '.s-item__itemLocation']
+      attributes: ['.s-card__subtitle', '.s-item__subtitle']
+      url: { css: ['a.su-link', 'a.s-card__link', 'a.s-item__link'], attr: href }
+      images: { css: ['img.s-card__image', '.s-item__image-img', 'img'], attr: src, all: true }
+      id: { from: url, regex: '/itm/(?:[^/]+/)?(\d+)' }
+fixture: fixtures/ebay.html
+fixture_min_items: 1

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block body %}
+<form method="post" action="/setup" class="panel">
+  <h2>Welcome. Three quick questions.</h2>
+
+  <label for="postcode">1. Your postcode <span class="muted">(optional, used to show how far away each car is)</span></label>
+  <input type="text" id="postcode" name="postcode" value="{{ cfg.owner.home_postcode }}" placeholder="e.g. LE1 1AA" autocomplete="postal-code">
+
+  <label>2. Your budget</label>
+  £ <input type="text" name="budget_min" value="{{ '{:,.0f}'.format(cfg.budget.min_gbp) }}" style="width:130px"> to
+  £ <input type="text" name="budget_max" value="{{ '{:,.0f}'.format(cfg.budget.max_gbp) }}" style="width:130px">
+
+  <label>3. Alerts on your phone</label>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:center">
+    <img src="/qr.svg" alt="QR code for phone alerts" width="200" height="200" style="background:#fff;padding:8px;border-radius:10px">
+    <ol style="margin:0;padding-left:22px;max-width:520px">
+      <li>Install the free <strong>ntfy</strong> app from the App Store or Google Play. No account is needed.</li>
+      <li>Scan this code with your phone camera, or in the app tap <strong>+</strong> and type this name:<br>
+        <code style="font-size:16px;word-break:break-all">{{ cfg.alerts.ntfy_topic }}</code></li>
+      <li>Keep the name private: anyone who has it can read your alerts.</li>
+    </ol>
+  </div>
+  <div class="check" style="margin-top:12px"><label><input type="checkbox" name="phone" value="skip"> Skip phone alerts for now (you will still see alerts on this PC)</label></div>
+
+  <p style="margin-top:24px"><button class="primary" type="submit">Finish and start</button></p>
+</form>
+{% endblock %}

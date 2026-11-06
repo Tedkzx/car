@@ -1,0 +1,45 @@
+# Car & Classic. Lists cars from abroad too, so the UK location filter applies.
+# UNVERIFIED: the site showed a Cloudflare check to the build machine (a cloud server).
+# The tracker never tries to get past such checks. On the owner's home connection a
+# plain request may work; run "SX200Tracker.exe --capture carandclassic" to save a page.
+# If it is challenged there too, the maintainer can set method: browser (Edge), which
+# loads the page like a person would, and still stops at any check.
+name: carandclassic
+display_name: Car & Classic
+group: uk_marketplace
+status: unverified
+method: http
+country: null           # read from each listing's location
+location_filter: uk
+searches:
+  - https://www.carandclassic.com/search?q={term}
+terms: [nissan 200sx, nissan silvia]
+paging: { max_pages: 1 }
+extract:
+  - type: jsonld
+    types: [Car, Vehicle, Product]
+    id_regex: '/(?:car|l)/([A-Za-z0-9]+)'
+  - type: json_attr
+    selector: '#app'
+    attr: data-page
+    items: props.listings.data
+    fields:
+      id: [id, slug]
+      title: [title, name]
+      price: [price.value, price.amount, price]
+      currency: [price.currency, currency]
+      year: year
+      location: [location.name, location, country]
+      images: [images.*.url, image.url]
+      url: [url, link]
+  - type: css
+    items: ['article[data-testid="listing-card"]', 'article.listing', 'a[href*="/car/"]']
+    fields:
+      title: ['h2', 'h3', '[data-testid="listing-title"]']
+      price: ['[data-testid="listing-price"]', '.price']
+      location: ['[data-testid="listing-location"]', '.location']
+      url: { css: [':self', 'a'], attr: href }
+      images: { css: 'img', attr: src, all: true }
+      id: { from: url, regex: '/(?:car|l)/([A-Za-z0-9]+)' }
+fixture: fixtures/carandclassic.html
+fixture_min_items: 1

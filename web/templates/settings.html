@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block body %}
+<form method="post" action="/settings" class="panel">
+  <h2>Settings</h2>
+  {% if request.query_params.get('saved') %}<p class="saved">Saved.</p>{% endif %}
+  <label>Your postcode</label>
+  <input type="text" name="postcode" value="{{ cfg.owner.home_postcode }}">
+  <label>Budget</label>
+  £ <input type="text" name="budget_min" value="{{ '{:,.0f}'.format(cfg.budget.min_gbp) }}" style="width:130px"> to
+  £ <input type="text" name="budget_max" value="{{ '{:,.0f}'.format(cfg.budget.max_gbp) }}" style="width:130px">
+  <label>Only alert me for cars scoring at least</label>
+  <input type="number" name="min_score" min="0" max="100" value="{{ cfg.alerts.alert_min_score }}" style="width:110px"> out of 100
+
+  <label>Which cars</label>
+  <div class="check">
+    <label><input type="checkbox" name="include_180sx" {{ 'checked' if cfg.target.include_180sx }}> Include 180SX, Sileighty and Onevia</label>
+    <label><input type="checkbox" name="alert_swaps" {{ 'checked' if cfg.target.alert_swaps }}> Alert me about engine-swapped cars too</label>
+  </div>
+
+  <label>Alerts</label>
+  <div class="check">
+    <label><input type="checkbox" name="ntfy_enabled" {{ 'checked' if cfg.alerts.ntfy_enabled }}> Phone alerts (ntfy)</label>
+    <label><input type="checkbox" name="windows_enabled" {{ 'checked' if cfg.alerts.windows_enabled }}> Windows notifications on this PC</label>
+  </div>
+  <p><button type="button" hx-post="/test-alert" hx-target="#testmsg">Send a test alert</button> <span id="testmsg"></span></p>
+  <details><summary>Phone set-up code</summary>
+    <img src="/qr.svg" alt="QR code" width="180" height="180" style="background:#fff;padding:8px;border-radius:10px">
+    <p><code style="word-break:break-all">{{ cfg.alerts.ntfy_topic }}</code></p>
+    <div class="check"><label><input type="checkbox" name="new_topic"> Make a new private code (your phone will need to scan it again)</label></div>
+  </details>
+
+  <label>Sites to check</label>
+  <div class="check">
+    {% for name, r in recipes.items() %}
+    <label><input type="checkbox" name="src_{{ name }}" {{ '' if name in disabled else 'checked' }}> {{ r.display_name }}{% if r.status != 'verified' %} <span class="muted">(being set up)</span>{% endif %}</label>
+    {% endfor %}
+  </div>
+
+  <details style="margin-top:18px"><summary>Advanced (for the maintainer)</summary>
+    <label>Maintainer alert topic (technical problems go here, never to your phone)</label>
+    <input type="text" name="maintainer_topic" value="{{ cfg.alerts.maintainer_ntfy_topic }}">
+  </details>
+  <p style="margin-top:22px"><button class="primary" type="submit">Save</button></p>
+</form>
+{% endblock %}

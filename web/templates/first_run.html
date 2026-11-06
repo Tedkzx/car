@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="panel">
+  <h2>All set</h2>
+  <p>A test alert has been sent{% if cfg.alerts.ntfy_enabled %} to your phone{% endif %}. The tracker is now checking every site for the first time. This takes a few minutes.</p>
+  {% include "_progress.html" %}
+  <p class="note">From now on it starts by itself when you turn on the PC, and checks every {{ cfg.schedule.interval_minutes }} minutes or so. Open it any time from the car icon next to the clock.</p>
+</div>
+{% endblock %}

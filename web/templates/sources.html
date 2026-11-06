@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block body %}
+{% include "_banner.html" %}
+<div class="panel">
+  <h2>Sources</h2>
+  <table>
+    <tr><th>Site</th><th>Status</th><th>Details</th><th>Last worked</th></tr>
+    {% for s in banner.sources %}
+    <tr><td>{{ s.display_name }}</td><td class="st-{{ s.label.split()[0] }}">{{ s.label }}</td><td>{{ s.detail }}</td><td>{{ s.last_success[:16].replace('T', ' ') if s.last_success else 'Not yet' }}</td></tr>
+    {% endfor %}
+  </table>
+  <p class="note">If a site shows "Needs attention", there is nothing you need to do. The others keep working, and the maintainer can fix the site remotely. If asked, press the button below and send the maintainer the file it saves.</p>
+  <form method="post" action="/problem-report"><button>Save a problem report</button></form>
+</div>
+{% endblock %}

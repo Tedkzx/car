@@ -1,0 +1,40 @@
+{% if not cards %}
+<div class="empty">
+  {% if view == 'new' %}No new matching cars right now. The tracker keeps checking and will alert your phone when one appears.
+  {% elif view == 'check' %}Nothing needs a look. Cars land here when the ad does not say enough to be sure of the engine.
+  {% elif view == 'shortlist' %}Your shortlist is empty. Press "Shortlist" on a car to keep it here.
+  {% else %}Nothing here yet.{% endif %}
+</div>
+{% endif %}
+<div class="cards">
+{% for c in cards %}
+<article class="card">
+  <div class="photo">{% if c.image %}<img src="{{ c.image }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}</div>
+  <div>
+    <h2>{{ c.title }}</h2>
+    <div class="price">{{ c.price | money }}{% if c.price and not c.in_budget %} <span class="chip">Outside your budget</span>{% endif %}</div>
+    <div class="muted">{% if c.year %}{{ c.year }}{% endif %}{% if c.mileage %} · {{ c.mileage | miles }} miles{% endif %}{% if c.location %} · {{ c.location }}{% endif %}{% if c.distance is not none %} ({{ '%.0f' % c.distance }} miles away){% endif %} · first seen {{ c.first_seen }}</div>
+    <div class="chips">
+      <span class="chip score">Score {{ '%.0f' % c.score }}/100</span>
+      <span class="chip">{{ c.generation }}</span>
+      {% if c.market %}<span class="chip">{{ c.market }}</span>{% endif %}
+      <span class="chip">{{ c.mod_tier }}</span>
+      {% if c.engine_status == 'unknown' %}<span class="chip flag">Engine not confirmed</span>{% endif %}
+      {% for f in c.flags %}<span class="chip flag">{{ f }}</span>{% endfor %}
+    </div>
+    <ul class="why">{% for r in c.reasons %}<li>{{ r }}</li>{% endfor %}{% for r in c.score_reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+    <div class="links">{% for l in c.links %}<a href="{{ l.url }}" target="_blank" rel="noopener">Open on {{ l.name }}</a>{% endfor %}</div>
+    <div class="actions">
+      {% if c.mot_url %}<a class="btn" href="{{ c.mot_url }}" target="_blank" rel="noopener">Check MOT ({{ c.reg }})</a>{% else %}<span class="note">No number plate in the ad, so the MOT check needs the plate from the seller.</span>{% endif %}
+      {% if c.state != 'shortlisted' %}<button class="primary" hx-post="/cars/{{ c.id }}/shortlist" hx-swap="none">Shortlist</button>{% endif %}
+      {% if c.state != 'ignored' %}<button hx-post="/cars/{{ c.id }}/ignore" hx-swap="none">Ignore</button>{% endif %}
+      {% if c.state != 'new' %}<button hx-post="/cars/{{ c.id }}/restore" hx-swap="none">Back to New</button>{% endif %}
+    </div>
+    <form hx-post="/cars/{{ c.id }}/notes" hx-target="#saved-{{ c.id }}" hx-trigger="change delay:500ms" style="margin-top:10px">
+      <textarea name="notes" rows="2" placeholder="Your notes">{{ c.notes }}</textarea><span id="saved-{{ c.id }}"></span>
+    </form>
+    <p class="note">Always see the car in person and run an HPI check before paying anything.</p>
+  </div>
+</article>
+{% endfor %}
+</div>

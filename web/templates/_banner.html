@@ -1,0 +1,8 @@
+<div class="banner {{ 'ok' if banner.ok else 'notok' }}" id="banner" hx-get="/banner" hx-trigger="every 30s" hx-swap="outerHTML">
+  <div><strong>{{ banner.text }}</strong>{% if paused %} · <strong>Paused</strong>{% endif %}<br><small>Last checked {{ last_sweep }}</small></div>
+  <div class="actions">
+    <button hx-post="/check-now" hx-target="#nowmsg">Check now</button>
+    <form method="post" action="/pause" style="display:inline"><button>{{ 'Resume' if paused else 'Pause' }}</button></form>
+    <span id="nowmsg"></span>
+  </div>
+</div>

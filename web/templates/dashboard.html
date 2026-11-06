@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block body %}
+{% include "_banner.html" %}
+<div id="cards" hx-get="/cars?view={{ view }}" hx-trigger="carsChanged from:body, every 120s">
+{% include "_cards.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,76 @@
+# SX200 Tracker
+
+Finds factory-SR20DET Nissan 200SX and Silvia cars for sale in the UK, ranks them stock-first, and alerts the owner's phone. Built from the "Nissan 200SX Listing Tracker: Build Spec" (6 Nov 2026). This is **milestone 1**.
+
+## For the owner (under 5 minutes)
+
+1. Download `SX200-Tracker-Setup.exe` and run it. If Windows shows a blue warning, click **More info**, then **Run anyway**.
+2. Answer three questions: postcode (optional), budget, phone alerts.
+3. Install the free **ntfy** app on your phone and scan the code on the screen. No account is needed.
+
+That's all. It starts by itself when the PC turns on. Open it from the car icon next to the clock.
+
+## For the maintainer
+
+### Get the installer built
+
+There is no Windows machine in the build environment, so a GitHub Actions workflow builds the installer:
+
+1. Create a GitHub repository and push this folder to it.
+2. Every push to `main` runs the tests on Linux and Windows, bundles the app with PyInstaller, builds `SX200-Tracker-Setup.exe` with Inno Setup, installs it silently on the Windows runner, and self-tests the installed copy. The installer is attached to the run as an artifact.
+3. Push a tag such as `v0.1.0` to publish a GitHub release with the installer attached.
+
+### Commands
+
+```
+SX200Tracker-cli.exe --selftest          test every recipe against its saved page
+SX200Tracker-cli.exe --capture ebay      save a real search page from the owner's connection
+SX200Tracker-cli.exe --sweep-once        run one sweep and print what each source returned
+```
+
+In development: `python app.py --no-browser`, `python -m pytest -q`, `python -m tests.labelled_eval`.
+
+### Where things live
+
+`%APPDATA%\SX200Tracker\`: `tracker.db` (SQLite), `config.yaml`, `logs\`, `recipes\` (downloaded recipes override the shipped ones; milestone 2 fills this from the repository), `browser-profile\` (Edge, for sites that need it).
+
+### Project layout
+
+```
+app.py          entry point: tray icon, scheduler, local web server, maintainer commands
+core/           config, db, models, normalizer, matcher, pipeline, health, scheduler, winsys
+collectors/     recipe_engine.py (YAML recipes: embedded JSON, then JSON-LD, then CSS), browser_edge.py, capture.py
+recipes/        one YAML per source, fixtures/ (saved real pages), SOURCES.md
+enrich/         plate_extract.py, geo.py (postcodes.io)
+scoring/        score.py (provisional; milestone 3 completes it)
+alerts/         ntfy.py, windows_toast.py, notifier.py
+web/            FastAPI + Jinja2 + HTMX dashboard and setup page
+installer/      PyInstaller spec, Inno Setup script
+tests/          labelled listings, holdout set, unit, pipeline and web tests
+```
+
+## Milestone 1 acceptance status
+
+| Check | Status |
+| --- | --- |
+| Database, config, matcher, recipe engine | Done, tested |
+| Matcher precision ≥ 95%, recall ≥ 90%, zero parts / wanted / scam alerts | 100% / 100% on 159 labelled listings and on a 28-listing holdout set, 0 junk alerts. **Only 18 of the 159 are real listings**; the rest are synthetic and were written alongside the matcher, so they overstate accuracy. The spec's bar needs 150+ real labelled ads (maintainer task) |
+| PistonHeads scraper | Verified on the live site, saved page, self-test passes |
+| Gumtree scraper | Verified on the live site, saved page, self-test passes |
+| eBay UK scraper | Recipe written, **not verified**: eBay refused the cloud build machine. Run `--capture ebay` on the owner's PC |
+| Car & Classic scraper | Recipe written, **not verified**: Cloudflare check on the cloud build machine, which the tracker never bypasses. Run `--capture carandclassic` on the owner's PC |
+| ntfy phone alerts | Verified: JSON publish to ntfy.sh with no account, £ signs intact |
+| Windows notifications, tray icon, Startup entry | Written; can only be tested on Windows |
+| Dashboard and three-question setup | Done, tested, screenshots checked at desktop and phone widths |
+| Installer | Inno Setup script + CI workflow written; the same PyInstaller spec builds and self-tests on Linux. **Not yet built on Windows** |
+| First real alert within 10 minutes on a clean Windows 11 machine | **Not yet tested** (needs Windows). Note: no in-scope car was for sale on PistonHeads or Gumtree on 6 Nov 2026, so the first alert depends on the market; use Settings, "Send a test alert" to prove delivery |
+
+### Before trusting it
+
+- Collect 150+ real labelled listings into `tests/labelled/listings.jsonl` (`origin: real`) and rerun `python -m tests.labelled_eval`.
+- Confirm the gov.uk MOT link format by hand with one plate (`web/server.py`, `MOT_URL`). It could not be reached from the build machine.
+- The seed price bands in `scoring/score.py` are rough guesses until milestone 3's rolling medians.
+
+### Not in milestone 1 (by design)
+
+Autotrader and the other milestone 2 sites, image-hash and probable-duplicate merging, recipe hot-update and auto-update, daily scheduled self-tests, digest and quiet hours, full scoring and price history views, imports and landed cost, Facebook, forums, auctions, the MOT API.

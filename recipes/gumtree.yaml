@@ -1,0 +1,28 @@
+# Gumtree cars. Verified against the live site on 6 Nov 2026.
+# Gumtree has no listing JSON in the page (the JSON-LD lists names and links only), so CSS is used.
+name: gumtree
+display_name: Gumtree
+group: uk_marketplace
+status: verified
+method: http
+country: uk
+searches:
+  - https://www.gumtree.com/search?search_category=cars&q={term}
+terms: [nissan 200sx, nissan silvia, nissan s14, nissan s15, sr20det]
+paging: { max_pages: 1 }
+extract:
+  - type: css
+    items: '[data-q="search-result"]'
+    fields:
+      title: '[data-q="tile-title"]'
+      price: '[data-q="tile-price"]'
+      location: '[data-q="tile-location"]'
+      attributes: '[data-q="tile-attributes"]'
+      description: '[data-q="tile-description"]'
+      listed: '[data-q="tile-date-posted"]'
+      url: { css: 'a[data-q="search-result-anchor"]', attr: href }
+      images: { css: 'img', attr: src, all: true }
+      id: { from: url, regex: '/(\d+)/?(?:\?.*)?$' }
+fixture: fixtures/gumtree.html
+fixture_url: https://www.gumtree.com/search?search_category=cars&q=nissan+silvia
+fixture_min_items: 1
