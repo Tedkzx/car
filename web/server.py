@@ -193,7 +193,8 @@ def create_app(state: AppState) -> FastAPI:
 
     @app.get("/first-run", response_class=HTMLResponse)
     def first_run(request: Request):
-        return tpl.TemplateResponse(request, "first_run.html", ctx(request))
+        return tpl.TemplateResponse(request, "first_run.html", ctx(
+            request, p=state.pipeline.progress, started=state.db.get_meta("last_sweep") is not None))
 
     @app.get("/qr.svg")
     def qr():

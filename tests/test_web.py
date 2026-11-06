@@ -77,3 +77,13 @@ def test_settings_save_and_disable_source():
     assert cfg["alerts"]["alert_min_score"] == 70 and cfg["budget"]["max_gbp"] == 21000
     assert "pistonheads" in cfg["sources"]["disabled"]  # its box was not ticked
     assert cfg["alerts"]["windows_enabled"] is False
+
+
+def test_every_page_renders_after_setup():
+    c, state, _ = client_with_data()
+    state.cfg()["setup_complete"] = False
+    r = c.post("/setup", data={"postcode": "LE1 1AA", "budget_min": "10000", "budget_max": "20000"})
+    assert r.status_code == 200 and "All set" in r.text  # follows the redirect to /first-run
+    for path in ["/", "/?view=check", "/?view=shortlist", "/?view=all", "/?view=removed", "/cars?view=new",
+                 "/banner", "/progress", "/first-run", "/setup", "/sources", "/settings", "/qr.svg"]:
+        assert c.get(path).status_code == 200, path
