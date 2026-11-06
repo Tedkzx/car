@@ -599,6 +599,13 @@ def run_recipe(recipe: Recipe, cfg: dict, fetcher: HttpFetcher | None = None, br
     Raises BlockedError at the first sign of blocking, so the caller backs off.
     """
     data = recipe.data
+    if data.get("adapter"):
+        # Custom Python adapters ship inside the app; a recipe can only name one, never supply code.
+        if data["adapter"] == "ebay_api":
+            from . import ebay_api
+
+            return ebay_api.run(data, cfg)
+        raise CollectorError(f"Unknown adapter {data['adapter']!r}")
     fetcher = fetcher or HttpFetcher()
     results: dict[str, dict] = {}
     pages_ok = 0

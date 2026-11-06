@@ -285,9 +285,27 @@ def create_app(state: AppState) -> FastAPI:
     @app.get("/settings", response_class=HTMLResponse)
     def settings(request: Request):
         recipes = state.pipeline.recipes
+        from collectors import ebay_api
+
+        cid, _secret = ebay_api.get_keys()
         return tpl.TemplateResponse(request, "settings.html", ctx(
             request, view="settings", recipes=recipes, topic_url=_topic_url(state.cfg()),
-            disabled=set(state.cfg()["sources"].get("disabled") or [])))
+            disabled=set(state.cfg()["sources"].get("disabled") or []),
+            ebay_key=(cid[:6] + "…") if cid else None))
+
+    @app.post("/ebay-test", response_class=HTMLResponse)
+    def ebay_test():
+        from collectors import ebay_api
+
+        cid, secret = ebay_api.get_keys()
+        if not (cid and secret):
+            return HTMLResponse('<span class="warn">No eBay key saved yet.</span>')
+        try:
+            api = ebay_api.EbayBrowse(cid, secret)
+            n = len(api.search("nissan 200sx", 1000, 100000))
+            return HTMLResponse(f'<span class="saved">The key works. eBay returned {n} listings for "nissan 200sx".</span>')
+        except Exception as e:
+            return HTMLResponse(f'<span class="warn">{e}</span>')
 
     @app.post("/settings")
     async def settings_save(request: Request):
@@ -303,6 +321,12 @@ def create_app(state: AppState) -> FastAPI:
         cfg["target"]["include_180sx"] = form.get("include_180sx") == "on"
         cfg["target"]["alert_swaps"] = form.get("alert_swaps") == "on"
         cfg["sources"]["disabled"] = [n for n in state.pipeline.recipes if form.get(f"src_{n}") != "on"]
+        from collectors import ebay_api
+
+        if form.get("ebay_remove") == "on":
+            ebay_api.set_keys("", "")
+        elif str(form.get("ebay_client_id", "")).strip() and str(form.get("ebay_client_secret", "")).strip():
+            ebay_api.set_keys(str(form["ebay_client_id"]).strip(), str(form["ebay_client_secret"]).strip())
         if form.get("new_topic") == "on":
             cfg["alerts"]["ntfy_topic"] = config_mod.new_topic()
         state.save(cfg)

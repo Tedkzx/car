@@ -127,6 +127,11 @@ class Pipeline:
                                          f"Blocked three times in a row: {e}. The recipe may need attention.")
             return
         except Exception as e:  # isolation: any failure stays inside this source
+            if isinstance(e, engine.CollectorError) and str(e).startswith("Off:"):
+                # An optional source without its key: shown as Off, not as a fault.
+                health.record_failure(self.db, name, str(e), blocked=False)
+                res.per_source[name] = "off"
+                return
             if isinstance(e, engine.CollectorError):
                 msg = str(e)
                 log.warning("collector %s: %s", name, msg)

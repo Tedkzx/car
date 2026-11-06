@@ -15,9 +15,9 @@ One line per source: status, last checked, method. Add a line whenever a search 
 | SBT Japan | Verified | 2026-11-06 | HTTP, CSS | 50 Silvias a page. Chassis code but rarely the trim, so most go to "Needs a look". USD FOB |
 | Car From Japan | Verified | 2026-11-06 | HTTP, CSS | 25 a page. "Grade R" means Spec-R. USD FOB |
 | Cazoo | Working on the owner's PC | 2026-11-06 | Edge, auto | Motors.co.uk now redirects here. 24 listings on the first run from home (all Nissans; the matcher filters) |
-| eBay UK | Blocked | 2026-11-06 | Edge | Blocks plain requests and the tracker's Edge, from the cloud and from home |
+| eBay UK | Needs a free key | 2026-11-06 | eBay's official Browse API | Scraping was blocked from the cloud and from home, so 0.4.0 uses the official API instead. Owner adds an App ID and Cert ID in Settings (kept in Windows Credential Manager). Unverified until a real key returns results |
 | Car & Classic | Blocked | 2026-11-06 | Edge | Same as eBay |
-| Autotrader | Blocked | 2026-11-06 | Edge, auto | Blocked from home too |
+| Autotrader | Blocked | 2026-11-06 | Edge, auto | Blocked from home too. No public API. Option: read Autotrader's saved-search alert emails (needs an email app password) |
 | CarGurus UK | Blocked | 2026-11-06 | Edge, auto | Blocked from home too |
 | Preloved | Loads, finds nothing | 2026-11-06 | Edge, auto | Needs a captured page to write selectors |
 | theparking.eu | Unverified | 2026-11-06 | Edge, auto | Cloudflare on the cloud machine. UK-located cars only |

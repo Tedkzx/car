@@ -12,7 +12,8 @@ datas = [
     (str(ROOT / "web" / "static"), "web/static"),
 ]
 datas += collect_data_files("playwright")  # the Playwright driver; browsers are not bundled (Edge is used)
-hidden = collect_submodules("uvicorn") + ["selectolax.lexbor", "pystray._win32", "winotify", "multipart"]
+hidden = collect_submodules("uvicorn") + collect_submodules("keyring.backends") + [
+    "selectolax.lexbor", "pystray._win32", "winotify", "multipart", "win32ctypes.core"]
 
 a = Analysis([str(ROOT / "app.py")], pathex=[str(ROOT)], datas=datas, hiddenimports=hidden,
              excludes=["tkinter", "pytest", "matplotlib", "numpy.tests"], noarchive=False)

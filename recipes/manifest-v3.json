@@ -6,7 +6,7 @@
   "carfromjapan.yaml": "196c1e76c91b8f5db839193bda4faab02356ac1c65ec22d62b7c2d0944b68d7d",
   "cargurus.yaml": "6edfa0ceeb592d6a17459e4cd464d667f77c09447fdb27d27653a71e1a94c063",
   "cazoo.yaml": "7a49246687727f55aedfd78bf9a03929277240a7501aa00cf05e948fb164320c",
-  "ebay.yaml": "a3501e3bb3e07032bc9b1a43483ba00384a074f3c63284af6bd6be0d5b2154e7",
+  "ebay.yaml": "c9d97d2694c90309fbdfa19427636a6617776f35e6ae9a875f229bd880fe1ca6",
   "exchangeandmart.yaml": "b6ef6881d72a55cdc2920d77d5a15e3c9ca3c7f506c55fefc16f22b3554e08af",
   "fixtures/350z-uk.xml": "173c9c7bc2442cfaa141b906729b4f8b65ccc705f532a8868d2dfd5424fc39f7",
   "fixtures/carfromjapan.html": "e8c9ce7b01d819fd87a4294ec546e529bb818bd8a8abf6f40fcd09897c5f41e7",
@@ -26,6 +26,7 @@
  },
  "requires": {
   "carfromjapan.yaml": "0.3.0",
+  "ebay.yaml": "0.4.0",
   "fixtures/carfromjapan.html": "0.3.0",
   "fixtures/goonet.html": "0.3.0",
   "fixtures/sbtjapan.html": "0.3.0",

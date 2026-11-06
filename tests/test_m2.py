@@ -143,14 +143,14 @@ def test_old_app_versions_never_receive_recipes_they_cannot_handle():
 
 # ---- scheduling, health -----------------------------------------------------------------------
 def test_browser_sources_respect_their_minimum_interval():
-    p, db, sent, _ = make({"pistonheads": [(200, "")], "ebay": [(200, "")]})
+    p, db, sent, _ = make({"pistonheads": [(200, "")], "carandclassic": [(200, "")]})
     browser = FakeFetcher([(200, "<html><body><ul></ul></body></html>")])
     p.browser_factory = lambda: browser
     p.sweep()
     p.sweep()
-    assert len(browser.urls) == len(engine.search_urls(p.recipes["ebay"].data, config.DEFAULTS))  # ran once only
+    assert len(browser.urls) == len(engine.search_urls(p.recipes["carandclassic"].data, config.DEFAULTS))  # ran once only
     res = p.sweep(force=True)
-    assert res.per_source["ebay"] == 0
+    assert res.per_source["carandclassic"] == 0
 
 
 def test_verified_source_finding_nothing_repeatedly_needs_attention():
@@ -222,7 +222,7 @@ def test_every_recipe_loads_and_has_a_method():
     recipes = engine.load_recipes([ROOT / "recipes"])
     assert len(recipes) >= 12
     for r in recipes.values():
-        assert r.method in ("http", "browser") and r.data.get("searches") and r.data.get("extract")
+        assert r.method in ("http", "browser", "api") and r.data.get("searches") and r.data.get("extract")
         ok, msg = engine.self_test(r)
         if r.status == "verified":
             assert ok, f"{r.name}: {msg}"

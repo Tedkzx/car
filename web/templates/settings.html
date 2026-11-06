@@ -36,6 +36,23 @@
     {% endfor %}
   </div>
 
+  <details style="margin-top:18px" {{ 'open' if not ebay_key }}><summary>eBay (optional, free key)</summary>
+    {% if ebay_key %}<p class="saved">An eBay key is saved ({{ ebay_key }}).</p>
+      <p><button type="button" hx-post="/ebay-test" hx-target="#ebaymsg">Test the eBay key</button> <span id="ebaymsg"></span></p>
+      <div class="check"><label><input type="checkbox" name="ebay_remove"> Remove the eBay key</label></div>
+    {% else %}
+    <ol class="note" style="font-size:16px">
+      <li>Go to <a href="https://developer.ebay.com/" target="_blank" rel="noopener">developer.ebay.com</a>, click <strong>Join</strong> and sign up (free). Confirm the email.</li>
+      <li>Open <strong>Application Keys</strong>, give the app any name, and create a <strong>Production</strong> keyset.</li>
+      <li>If asked about "marketplace account deletion" notifications, choose to opt out: this tracker stores no eBay member data.</li>
+      <li>Copy the <strong>App ID (Client ID)</strong> and <strong>Cert ID (Client Secret)</strong> into the boxes below and press Save.</li>
+    </ol>
+    {% endif %}
+    <label>App ID (Client ID)</label><input type="text" name="ebay_client_id" autocomplete="off" placeholder="{{ 'Leave empty to keep the saved key' if ebay_key else '' }}">
+    <label>Cert ID (Client Secret)</label><input type="password" name="ebay_client_secret" autocomplete="off">
+    <p class="note">Kept in Windows Credential Manager on this PC, never in a file.</p>
+  </details>
+
   <details style="margin-top:18px"><summary>Advanced (for the maintainer)</summary>
     <label>Maintainer alert topic (technical problems go here, never to your phone)</label>
     <input type="text" name="maintainer_topic" value="{{ cfg.alerts.maintainer_ntfy_topic }}">

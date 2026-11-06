@@ -106,7 +106,7 @@ def test_challenge_and_block_pages_are_detected_not_bypassed():
 
 def test_unverified_recipes_have_no_fixture_yet_and_say_so():
     recipes = engine.load_recipes([ROOT / "recipes"])
-    for name in ("ebay", "carandclassic"):
+    for name in ("carandclassic", "autotrader"):
         assert recipes[name].status == "unverified"
         assert engine.self_test(recipes[name])[0] is False
 
@@ -119,18 +119,9 @@ def test_downloaded_recipe_overrides_shipped_one(tmp_path):
 
 def test_search_urls_expand_terms_and_prices():
     recipes = engine.load_recipes([ROOT / "recipes"])
-    urls = engine.search_urls(recipes["ebay"].data, config.DEFAULTS)
-    assert any("_udlo=8000" in u and "_udhi=25000" in u and "nissan+200sx" in u for u in urls)
-
-
-def test_ebay_recipe_reads_current_card_markup():
-    """eBay's markup as documented, not a saved page: a check of the recipe wiring only."""
-    html = """<ul><li class="s-card"><a class="su-link" href="https://www.ebay.co.uk/itm/1234567890?x=1">
-      <div class="s-card__title"><span class="su-styled-text">Nissan 200SX S14a Turbo 1998</span></div></a>
-      <span class="s-card__price">£12,995.00</span><img class="s-card__image" src="https://i.ebayimg.com/a.jpg"></li></ul>"""
-    recipes = engine.load_recipes([ROOT / "recipes"])
-    items = engine.extract(html, recipes["ebay"].data)
-    assert items[0]["id"] == "1234567890" and items[0]["title"].startswith("Nissan 200SX")
+    urls = engine.search_urls(recipes["preloved"].data, config.DEFAULTS)
+    assert urls == ["https://www.preloved.co.uk/search?keyword=nissan+200sx",
+                    "https://www.preloved.co.uk/search?keyword=nissan+silvia"]
 
 
 # ---- config and scheduler ------------------------------------------------

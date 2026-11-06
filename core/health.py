@@ -103,6 +103,8 @@ def status_of(row, recipe_status: str, interval_minutes: int, expect_results: bo
             return "Needs attention", f"{row['last_error']}. Paused until {paused.astimezone():%H:%M}, the maintainer has been told"
         return "Slow", f"{row['last_error']}. Trying again at {paused.astimezone():%H:%M}"
     if error and (not success or error > success):
+        if (row["last_error"] or "").startswith("Off:"):
+            return "Off", row["last_error"][4:].strip()
         return "Needs attention", row["last_error"] or "Last check failed"
     if row["selftest_error"]:
         return "Needs attention", f"Daily self-test failed: {row['selftest_error']}"
@@ -125,9 +127,10 @@ def banner(db: DB, recipes: dict, enabled: list[str], interval_minutes: int) -> 
             "name": name, "display_name": rec.display_name, "label": label, "detail": detail,
             "last_success": rows[name]["last_success"] if name in rows else None,
         })
+    off = sum(s["label"] == "Off" for s in sources)
     working = sum(s["label"] in ("Working", "Being set up", "Waiting") for s in sources)
-    repairing = len(sources) - working
-    text = f"{working} of {len(sources)} sources working"
+    repairing = len(sources) - working - off
+    text = f"{working} of {len(sources) - off} sources working"
     if repairing:
         text += f", {repairing} being repaired"
     return {"text": text, "ok": repairing == 0, "sources": sources}
