@@ -129,6 +129,12 @@ MIGRATIONS = [
     ("source_health", "last_attempt", "TEXT"),
     ("source_health", "zero_runs", "INTEGER DEFAULT 0"),
     ("source_health", "selftest_error", "TEXT"),
+    ("listings", "price_original", "REAL"),
+    ("listings", "currency", "TEXT DEFAULT 'GBP'"),
+    ("listings", "fx_rate", "REAL"),
+    ("listings", "fx_date", "TEXT"),
+    ("listings", "landed_cost_gbp", "REAL"),
+    ("listings", "landed_breakdown", "TEXT"),
 ]
 
 

@@ -1,7 +1,7 @@
 ; Inno Setup script: one per-user installer, no admin rights (spec section 11).
 ; Build:  iscc installer\setup.iss /DMyAppVersion=0.1.0
 #ifndef MyAppVersion
-  #define MyAppVersion "0.2.0"
+  #define MyAppVersion "0.3.0"
 #endif
 #define MyAppName "SX200 Tracker"
 #define MyAppExe "SX200Tracker.exe"

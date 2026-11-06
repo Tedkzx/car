@@ -52,6 +52,8 @@ td,th{text-align:left;padding:10px;border-bottom:1px solid var(--line)}
 .empty{padding:40px;text-align:center;color:var(--muted)}
 .bar{height:14px;background:var(--line);border-radius:7px;overflow:hidden}.bar>div{height:100%;background:var(--accent)}
 .note{font-size:15px;color:var(--muted)}
+.v-good{color:var(--good);font-weight:700}.v-warn{color:var(--warn);font-weight:700}.v-bad{color:var(--bad);font-weight:700}
+.tbl-wrap{overflow-x:auto}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:700px){.pair{grid-template-columns:1fr}}
 .mini{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}.mini .photo{height:150px}
 </style>
@@ -63,6 +65,7 @@ td,th{text-align:left;padding:10px;border-bottom:1px solid var(--line)}
   <nav>
     {% for key, label in views.items() %}<a href="/?view={{ key }}" class="{{ 'on' if view == key else '' }}">{{ label }}{% if counts.get(key) %}<span class="n">{{ counts[key] }}</span>{% endif %}</a>{% endfor %}
     {% if counts.get('duplicates') %}<a href="/duplicates" class="{{ 'on' if view == 'duplicates' else '' }}">Same car?<span class="n">{{ counts.duplicates }}</span></a>{% endif %}
+    <a href="/everything" class="{{ 'on' if view == 'everything' else '' }}">Everything found</a>
     <a href="/sources" class="{{ 'on' if view == 'sources' else '' }}">Sources</a>
     <a href="/settings" class="{{ 'on' if view == 'settings' else '' }}">Settings</a>
   </nav>

@@ -138,6 +138,14 @@ def normalise(source: str, raw: dict, default_country: str | None = None) -> Lis
         extra={k: v for k, v in (("attributes", attributes), ("sale_status", clean_text(raw.get("sale_status")))) if v},
     )
     listing.country = country_of(location) or default_country
+    cur = (listing.currency or "GBP").upper()
+    if raw.get("price") and re.search(r"¥|\bJPY\b|円", str(raw.get("price"))):
+        cur = "JPY"
+    elif raw.get("price") and re.search(r"US\$|\bUSD\b", str(raw.get("price"))):
+        cur = "USD"
+    listing.currency = cur
+    if cur != "GBP":
+        listing.price_original, listing.price_gbp = listing.price_gbp, None
     if listing.seller_type:
         if "trade" in listing.seller_type or "dealer" in listing.seller_type:
             listing.seller_type = "trade"

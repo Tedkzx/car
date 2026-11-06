@@ -6,7 +6,7 @@
   <table>
     <tr><th>Site</th><th>Status</th><th>Details</th><th>Last worked</th></tr>
     {% for s in banner.sources %}
-    <tr><td>{{ s.display_name }}</td><td class="st-{{ s.label.split()[0] }}">{{ s.label }}</td><td>{{ s.detail }}</td><td>{{ s.last_success[:16].replace('T', ' ') if s.last_success else 'Not yet' }}</td></tr>
+    <tr><td>{{ s.display_name }}</td><td class="st-{{ s.label.split()[0] }}">{{ s.label }}</td><td>{{ s.detail }}{% if relevant.get(s.name) is not none and s.label == 'Working' %}<br><span class="muted">{{ relevant.get(s.name, 0) }} of them were a 200SX, Silvia or 180SX</span>{% endif %}</td><td>{{ s.last_success[:16].replace('T', ' ') if s.last_success else 'Not yet' }}</td></tr>
     {% endfor %}
   </table>
   {% for u in updates %}<p class="note">{{ u }}</p>{% endfor %}

@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 HERE = Path(__file__).resolve().parent
 VIEWS = {
     "new": "New",
+    "japan": "In Japan",
     "check": "Needs a look",
     "shortlist": "Shortlist",
     "all": "All active",
@@ -72,6 +73,7 @@ def _ago(ts: str | None) -> str:
 def car_cards(db: DB, recipes: dict, view: str, budget: dict) -> list[dict]:
     where = {
         "new": "c.in_scope=1 AND c.shortlist_state='new'",
+        "japan": "c.market='jdm_overseas' AND c.shortlist_state<>'ignored' AND c.reasons NOT LIKE '%Excluded:%'",
         "check": "c.in_scope=0 AND c.engine_status='unknown' AND c.shortlist_state<>'ignored' "
                  "AND c.reasons NOT LIKE '%Excluded:%'",
         "shortlist": "c.shortlist_state='shortlisted'",
@@ -91,7 +93,7 @@ def car_cards(db: DB, recipes: dict, view: str, budget: dict) -> list[dict]:
             "ORDER BY li.first_seen", (c["id"],))]
         main = listings[0]
         images = loads(main["image_urls"], [])
-        price = main["price_gbp"]
+        price = main["landed_cost_gbp"] or main["price_gbp"]
         cards.append({
             "id": c["id"], "title": main["title"], "price": price,
             "in_budget": price is not None and budget["min_gbp"] <= price <= budget["max_gbp"],
@@ -106,6 +108,9 @@ def car_cards(db: DB, recipes: dict, view: str, budget: dict) -> list[dict]:
             "links": [{"name": recipes[l["source"]].display_name if l["source"] in recipes else l["source"],
                        "url": l["url"], "price": l["price_gbp"], "status": l["status"]} for l in listings],
             "in_scope": bool(c["in_scope"]), "engine_status": c["engine_status"],
+            "landed": loads(main["landed_breakdown"]) if main["landed_cost_gbp"] else None,
+            "asking_gbp": main["price_gbp"], "price_original": main["price_original"], "currency": main["currency"],
+            "fx_date": main["fx_date"],
         })
     return cards
 
@@ -121,7 +126,7 @@ def create_app(state: AppState) -> FastAPI:
         cfg = state.cfg()
         b = health.banner(state.db, state.pipeline.recipes, state.pipeline.enabled_sources(),
                           cfg["schedule"]["interval_minutes"])
-        counts = {v: len(car_cards(state.db, state.pipeline.recipes, v, cfg["budget"])) for v in ("new", "check", "shortlist")}
+        counts = {v: len(car_cards(state.db, state.pipeline.recipes, v, cfg["budget"])) for v in ("new", "check", "shortlist", "japan")}
         counts["duplicates"] = state.db.one(
             "SELECT COUNT(*) n FROM dup_candidates d JOIN cars a ON a.id=d.car_a JOIN cars b ON b.id=d.car_b "
             "WHERE d.state='pending'")["n"]
@@ -220,8 +225,40 @@ def create_app(state: AppState) -> FastAPI:
     @app.get("/sources", response_class=HTMLResponse)
     def sources(request: Request):
         updates = [state.db.get_meta("update_status_recipes"), state.db.get_meta("update_status_app")]
-        return tpl.TemplateResponse(request, "sources.html", ctx(request, view="sources",
+        relevant = {r["source"]: r["n"] for r in state.db.query(
+            "SELECT li.source, COUNT(*) n FROM listings li JOIN car_listings cl ON cl.listing_id=li.id "
+            "WHERE li.status IN ('active','relisted') GROUP BY li.source")}
+        return tpl.TemplateResponse(request, "sources.html", ctx(request, view="sources", relevant=relevant,
                                     updates=[u for u in updates if u]))
+
+    @app.get("/everything", response_class=HTMLResponse)
+    def everything(request: Request, show: str = "active"):
+        """Every 200SX / Silvia / 180SX the tracker has seen, with its verdict and why."""
+        status = "('active','relisted')" if show == "active" else "('active','relisted','removed','sold')"
+        rows = state.db.query(
+            f"SELECT c.id, c.in_scope, c.engine_status, c.generation, c.reasons, c.score, li.title, "
+            f"COALESCE(li.landed_cost_gbp, li.price_gbp) AS price_gbp, li.landed_cost_gbp, "
+            f"li.year, li.url, li.source, li.status, li.first_seen FROM cars c JOIN car_listings cl ON cl.car_id=c.id "
+            f"JOIN listings li ON li.id=cl.listing_id WHERE li.status IN {status} ORDER BY c.in_scope DESC, "
+            f"li.first_seen DESC LIMIT 500")
+        budget = state.cfg()["budget"]
+        items = []
+        for r in rows:
+            reasons = loads(r["reasons"], [])
+            excluded = next((x.split(": ", 1)[1] for x in reasons if x.startswith("Excluded: ")), None)
+            why = [x for x in reasons if not x.startswith("Excluded: ")]
+            if r["in_scope"]:
+                verdict, cls = "Match", "good"
+                if r["price_gbp"] and not budget["min_gbp"] <= r["price_gbp"] <= budget["max_gbp"]:
+                    verdict = "Match, outside budget"
+            elif not excluded and r["engine_status"] == "unknown":
+                verdict, cls = "Needs a look", "warn"
+            else:
+                verdict, cls = "Not a match", "bad"
+            items.append({**dict(r), "verdict": verdict, "cls": cls, "why": why[-1] if why else "",
+                          "source_name": state.pipeline.recipes[r["source"]].display_name
+                          if r["source"] in state.pipeline.recipes else r["source"]})
+        return tpl.TemplateResponse(request, "everything.html", ctx(request, view="everything", items=items, show=show))
 
     @app.get("/duplicates", response_class=HTMLResponse)
     def duplicates(request: Request):

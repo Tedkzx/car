@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="panel">
+  <h2>Everything found</h2>
+  <p>Every 200SX, Silvia and 180SX ad the tracker has seen, and what it decided. Only <strong>Match</strong> cars inside your budget send alerts. Adverts for other models (searches also return things like Suzuki SX4s) are left out of this list.</p>
+  <p><a href="/everything?show=active" class="{{ 'saved' if show == 'active' }}">On sale now</a> · <a href="/everything?show=all">Including removed and sold</a></p>
+  {% if not items %}<p class="empty">Nothing yet.</p>{% endif %}
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Verdict</th><th>Ad</th><th>Price</th><th>Why</th></tr>
+    {% for i in items %}
+    <tr>
+      <td class="v-{{ i.cls }}">{{ i.verdict }}</td>
+      <td><a href="{{ i.url }}" target="_blank" rel="noopener">{{ i.title }}</a><br><span class="muted">{{ i.source_name }}{% if i.year %} · {{ i.year }}{% endif %}{% if i.status in ('removed','sold') %} · {{ i.status }}{% endif %}</span></td>
+      <td>{{ i.price_gbp | money }}{% if i.landed_cost_gbp %}<br><span class="muted">landed est.</span>{% endif %}</td>
+      <td>{{ i.why }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+  <p class="note">Think a car is wrong? Tell the maintainer which one and what it should be. Each mistake becomes a test so it stays fixed.</p>
+</div>
+{% endblock %}

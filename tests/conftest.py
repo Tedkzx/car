@@ -31,6 +31,11 @@ class FakeFetcher:
             status, html = self.pages[min(len(self.urls) - 1, len(self.pages) - 1)]
         return status, html, url
 
+    def post(self, url, data):
+        """Form paging (Goo-net): later pages are empty in tests."""
+        self.urls.append((url, data))
+        return 200, "<html></html>", url
+
     def close(self):
         pass
 

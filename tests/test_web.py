@@ -4,6 +4,7 @@ from alerts.notifier import Notifier
 from core.db import DB
 from web.server import AppState, create_app
 
+from .conftest import RFIX
 from .test_pipeline import make, make_page
 
 
@@ -85,5 +86,17 @@ def test_every_page_renders_after_setup():
     r = c.post("/setup", data={"postcode": "LE1 1AA", "budget_min": "10000", "budget_max": "20000"})
     assert r.status_code == 200 and "All set" in r.text  # follows the redirect to /first-run
     for path in ["/", "/?view=check", "/?view=shortlist", "/?view=all", "/?view=removed", "/cars?view=new",
-                 "/banner", "/progress", "/first-run", "/setup", "/sources", "/settings", "/qr.svg"]:
+                 "/banner", "/progress", "/first-run", "/setup", "/sources", "/settings", "/qr.svg",
+                 "/everything", "/everything?show=all", "/duplicates"]:
         assert c.get(path).status_code == 200, path
+
+
+def test_everything_found_explains_each_decision():
+    p, db, sent, cfg = make({"pistonheads": [(200, (RFIX / "pistonheads.html").read_text(encoding="utf-8"))]})
+    p.sweep()
+    state = AppState(db, p, FakeScheduler(), Notifier(lambda: state.cfg(), sent.ntfy_send, sent.toast_send))
+    state.cfg()["setup_complete"] = True
+    html = TestClient(create_app(state)).get("/everything").text
+    assert "1997 NISSAN 180SX Kouki Type X" in html and "excluded by your settings" in html
+    assert "Needs a look" in html and "Not a match" in html
+    assert "of them were a 200SX, Silvia or 180SX" in TestClient(create_app(state)).get("/sources").text

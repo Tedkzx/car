@@ -1,0 +1,30 @@
+# SBT Japan exporter. Verified against the live site on 6 Nov 2026 (50 Silvias per page).
+# Prices are FOB in US dollars. Some stock sits outside Japan; the location is read per car.
+name: sbtjapan
+display_name: SBT Japan
+group: japan_export
+status: verified
+method: http
+country: japan
+currency: USD
+price_basis: FOB
+min_interval_minutes: 120
+searches:
+  - https://www.sbtjapan.com/used-cars/nissan/silvia
+  - https://www.sbtjapan.com/used-cars/nissan/180sx
+paging: { param: page, max_pages: 5 }
+extract:
+  - type: css
+    items: '.card-products'
+    fields:
+      title: '.vehicles-main-title'
+      price: '.card-product__vehicle-prices .card-product__price'
+      attributes: '.card-product__infos'
+      location: { css: '.card-product__infos', regex: 'Inventory location:\s*(.+?)\s*$' }
+      colour: { css: '.card-product__infos', regex: 'Body color:\s*([A-Za-z ]+?)\s+Inventory' }
+      url: { css: 'a.vehicles-main-title, .vehicles-main-title a, a[href*="/used-cars/"]', attr: href }
+      images: { css: 'img', attr: src, all: true }
+      id: { from: url, regex: '/([A-Z]{2,4}\d{3,})/?$' }
+fixture: fixtures/sbtjapan.html
+fixture_url: https://www.sbtjapan.com/used-cars/nissan/silvia
+fixture_min_items: 30

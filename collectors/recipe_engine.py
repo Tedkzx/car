@@ -242,6 +242,12 @@ def _apply_templates(item: dict, fields: dict, page_url: str) -> None:
     for key in ("url",):
         if item.get(key):
             item[key] = urljoin(page_url, str(item[key]))
+    imgs = item.get("images")
+    if isinstance(imgs, str):
+        imgs = [imgs]
+    if imgs:
+        item["images"] = [urljoin(page_url or "https://localhost/", i) if i.startswith("//") or i.startswith("/") else i
+                          for i in imgs if isinstance(i, str)]
     for key, spec in fields.items():
         if isinstance(spec, dict) and spec.get("from"):
             src = item.get(spec["from"])
@@ -312,6 +318,15 @@ def _css(tree: LexborHTMLParser, strat: dict, page_url: str) -> list[dict]:
             spec = {"css": spec} if isinstance(spec, (str, list)) else spec
             sels = spec["css"] if isinstance(spec["css"], list) else [spec["css"]]
             value: Any = None
+            if spec.get("all") and len(sels) > 1:  # collect from every selector, in order
+                vals = []
+                for sel in sels:
+                    for f in (node.css(sel) if sel != ":self" else [node]):
+                        v = _attr(f, spec.get("attr")) if spec.get("attr") else _node_text(f)
+                        if v:
+                            vals.append(v)
+                item[name] = vals
+                continue
             for sel in sels:
                 found = node.css(sel) if sel != ":self" else [node]
                 if not found:
@@ -504,6 +519,19 @@ class HttpFetcher:
             )
         return self._client
 
+    def post(self, url: str, data: dict) -> tuple[int, str, str]:
+        """For sites that page through results with a form (Goo-net). Same politeness as get()."""
+        wait = random.uniform(self.min_delay, self.max_delay) - (time.monotonic() - self._last_request)
+        if self._last_request and wait > 0:
+            self.sleep(wait)
+        try:
+            r = self.client().post(url, data=data)
+        except Exception as e:
+            raise CollectorError(f"Could not reach the site ({type(e).__name__})") from e
+        finally:
+            self._last_request = time.monotonic()
+        return r.status_code, r.text, str(r.url)
+
     def get(self, url: str) -> tuple[int, str, str]:
         wait = random.uniform(self.min_delay, self.max_delay) - (time.monotonic() - self._last_request)
         if self._last_request and wait > 0:
@@ -564,10 +592,18 @@ def run_recipe(recipe: Recipe, cfg: dict, fetcher: HttpFetcher | None = None, br
         max_pages = int(get_path(data, "paging.max_pages") or 1)
         for page in range(1, max_pages + 1):
             page_url = url
+            form = None
             if page > 1:
-                param = get_path(data, "paging.param") or "page"
-                page_url = f"{url}{'&' if '?' in url else '?'}{param}={page}"
-            if recipe.method == "browser":
+                if get_path(data, "paging.method") == "post":
+                    step = int(get_path(data, "paging.step") or 20)
+                    form = {k: str(v).format(page=page, offset=(page - 1) * step)
+                            for k, v in (get_path(data, "paging.form") or {}).items()}
+                else:
+                    param = get_path(data, "paging.param") or "page"
+                    page_url = f"{url}{'&' if '?' in url else '?'}{param}={page}"
+            if form is not None and recipe.method != "browser":
+                status, html, final_url = fetcher.post(page_url, form)
+            elif recipe.method == "browser":
                 if browser is None:
                     raise CollectorError("This source needs the Edge browser, which is not available")
                 status, html, final_url = browser.get(page_url)

@@ -15,6 +15,11 @@ class Listing:
     price_gbp: float | None = None
     price_basis: str = "retail"  # retail, FOB, CIF
     currency: str = "GBP"
+    price_original: float | None = None  # in `currency`, when that is not GBP
+    fx_rate: float | None = None  # units of currency per £1
+    fx_date: str | None = None
+    landed_cost_gbp: float | None = None
+    landed: dict | None = None
     location_text: str = ""
     postcode: str | None = None
     country: str | None = None
@@ -28,6 +33,16 @@ class Listing:
     image_urls: list[str] = field(default_factory=list)
     listed_estimate: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def effective_price(self) -> float | None:
+        """What the owner would pay: estimated landed cost for imports, otherwise the asking price."""
+        return self.landed_cost_gbp or self.price_gbp
+
+    @property
+    def comparable_price(self) -> float | None:
+        """The seller's own price, for spotting price drops without exchange-rate noise."""
+        return self.price_original if self.price_original is not None else self.price_gbp
 
     @property
     def text(self) -> str:

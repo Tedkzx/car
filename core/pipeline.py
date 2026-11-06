@@ -16,7 +16,9 @@ from typing import Callable
 
 from alerts.notifier import Notifier, car_alert
 from collectors import recipe_engine as engine
+from enrich.fx import FX
 from enrich.geo import Geo
+from enrich.landed_cost import landed_cost
 from scoring.score import score as score_listing
 
 from . import dedupe, health
@@ -43,7 +45,7 @@ class SweepResult:
 class Pipeline:
     def __init__(self, db: DB, cfg_getter: Callable[[], dict], notifier: Notifier, recipes: dict | None = None,
                  fetcher_factory: Callable[[], engine.HttpFetcher] | None = None, browser_factory=None,
-                 geo: Geo | None = None, image_fetcher=None):
+                 geo: Geo | None = None, image_fetcher=None, fx: FX | None = None):
         self.db = db
         self.cfg = cfg_getter
         self.notifier = notifier
@@ -52,6 +54,7 @@ class Pipeline:
         self.browser_factory = browser_factory
         self.geo = geo or Geo(db)
         self.image_fetcher = image_fetcher
+        self.fx = fx or FX(db)
         self.progress: dict = {"running": False, "done": 0, "total": 0, "current": ""}
 
     # ------------------------------------------------------------------
@@ -156,15 +159,24 @@ class Pipeline:
         cfg = self.cfg()
         recipe = self.recipes.get(source)
         rdata = recipe.data if recipe else {}
+        raw = dict(raw)
+        for key in ("currency", "price_basis"):
+            if rdata.get(key) and not raw.get(key):
+                raw[key] = rdata[key]
         listing = normalise(source, raw, default_country=rdata.get("country"))
         if not listing.url:
             return None
         if rdata.get("location_filter") == "uk" and listing.country not in (None, "uk"):
             return None  # e.g. South African cars on Car & Classic
-        if listing.currency and listing.currency.upper() != "GBP" and rdata.get("group") != "japan_export":
-            return None  # foreign-priced listings outside the import flow (milestone 4)
-        match = classify(listing, include_180sx=cfg["target"]["include_180sx"],
-                         japan_source=rdata.get("group") == "japan_export")
+        japan = rdata.get("group") == "japan_export"
+        if listing.currency != "GBP":
+            if not japan:
+                return None  # a foreign-priced car on a UK site: outside both flows
+            listing.price_gbp, listing.fx_rate, listing.fx_date = self.fx.to_gbp(listing.price_original, listing.currency)
+        if japan and listing.price_gbp and (listing.country or "japan") != "uk":
+            listing.landed = landed_cost(listing.price_gbp, listing.price_basis, cfg["imports"])
+            listing.landed_cost_gbp = listing.landed["landed"]
+        match = classify(listing, include_180sx=cfg["target"]["include_180sx"], japan_source=japan)
         lid, is_new, old_price, relisted = self._upsert_listing(listing, raw_path)
         if res and is_new:
             res.new_listings += 1
@@ -199,20 +211,22 @@ class Pipeline:
         return lid
 
     def _upsert_listing(self, l: Listing, raw_path: str | None) -> tuple[int, bool, float | None, bool]:
-        row = self.db.one("SELECT id, price_gbp, status FROM listings WHERE source=? AND source_id=?",
+        row = self.db.one("SELECT id, price_gbp, price_original, status FROM listings WHERE source=? AND source_id=?",
                           (l.source, l.source_id))
         ts = now()
         if row is None:
             cur = self.db.execute(
                 "INSERT INTO listings(source, source_id, url, title, description, price_gbp, price_basis, location_text, "
                 "postcode, year, reg, reg_confidence, chassis_no, mileage, colour, seller_type, image_urls, "
-                "listed_estimate, first_seen, last_seen, status, raw_path) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "listed_estimate, first_seen, last_seen, status, raw_path, price_original, currency, fx_rate, fx_date, "
+                "landed_cost_gbp, landed_breakdown) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (l.source, l.source_id, l.url, l.title, l.description, l.price_gbp, l.price_basis, l.location_text,
                  l.postcode, l.year, l.reg, l.reg_confidence, l.chassis_no, l.mileage, l.colour, l.seller_type,
-                 dumps(l.image_urls), l.listed_estimate, ts, ts, "active", raw_path),
+                 dumps(l.image_urls), l.listed_estimate, ts, ts, "active", raw_path, l.price_original, l.currency,
+                 l.fx_rate, l.fx_date, l.landed_cost_gbp, dumps(l.landed) if l.landed else None),
             )
             lid = cur.lastrowid
-            self.db.execute("INSERT INTO price_history(listing_id, seen_at, price_gbp) VALUES (?,?,?)", (lid, ts, l.price_gbp))
+            self.db.execute("INSERT INTO price_history(listing_id, seen_at, price_gbp) VALUES (?,?,?)", (lid, ts, l.effective_price))
             for u in l.image_urls[:6]:
                 self.db.execute("INSERT OR IGNORE INTO images(listing_id, url) VALUES (?,?)", (lid, u))
             return lid, True, None, False
@@ -221,13 +235,17 @@ class Pipeline:
         self.db.execute(
             "UPDATE listings SET url=?, title=?, description=COALESCE(NULLIF(?, ''), description), price_gbp=?, "
             "location_text=?, year=COALESCE(?, year), mileage=COALESCE(?, mileage), image_urls=?, last_seen=?, "
-            "status=?, raw_path=COALESCE(?, raw_path) WHERE id=?",
+            "status=?, raw_path=COALESCE(?, raw_path), price_original=?, currency=?, fx_rate=?, fx_date=?, "
+            "landed_cost_gbp=?, landed_breakdown=? WHERE id=?",
             (l.url, l.title, l.description, l.price_gbp, l.location_text, l.year, l.mileage, dumps(l.image_urls), ts,
-             "relisted" if relisted or row["status"] == "relisted" else "active", raw_path, lid),
+             "relisted" if relisted or row["status"] == "relisted" else "active", raw_path, l.price_original,
+             l.currency, l.fx_rate, l.fx_date, l.landed_cost_gbp, dumps(l.landed) if l.landed else None, lid),
         )
-        if l.price_gbp != row["price_gbp"]:
-            self.db.execute("INSERT INTO price_history(listing_id, seen_at, price_gbp) VALUES (?,?,?)", (lid, ts, l.price_gbp))
-        return lid, False, row["price_gbp"], relisted
+        old_cmp = row["price_original"] if row["price_original"] is not None else row["price_gbp"]
+        if l.comparable_price != old_cmp:
+            self.db.execute("INSERT INTO price_history(listing_id, seen_at, price_gbp) VALUES (?,?,?)",
+                            (lid, ts, l.effective_price))
+        return lid, False, old_cmp, relisted
 
     def _car_for(self, lid: int, l: Listing) -> tuple[int, bool]:
         row = self.db.one("SELECT car_id FROM car_listings WHERE listing_id=?", (lid,))
@@ -262,8 +280,9 @@ class Pipeline:
     def _maybe_alert(self, car_id, lid, match, sc, listing: Listing, is_new, old_price, relisted) -> int:
         cfg = self.cfg()
         budget = cfg["budget"]
-        price = listing.price_gbp
-        in_budget = price is not None and budget["min_gbp"] <= price <= budget["max_gbp"]
+        effective = listing.effective_price
+        in_budget = effective is not None and budget["min_gbp"] <= effective <= budget["max_gbp"]
+        price = listing.comparable_price
         state = self.db.one("SELECT shortlist_state FROM cars WHERE id=?", (car_id,))["shortlist_state"]
         if state == "ignored":
             return 0

@@ -87,8 +87,9 @@ def score(listing: Listing, match: Match, weights: dict) -> Score:
     # Value against a seed band (provisional until there are comparables).
     value = 0.5
     median = SEED_MEDIAN.get(match.generation, SEED_MEDIAN["unknown"])
-    if listing.price_gbp:
-        ratio = listing.price_gbp / median
+    price = listing.effective_price
+    if price:
+        ratio = price / median
         value = max(0.0, min(1.0, 1.25 - ratio * 0.75))
         if ratio < 0.85:
             reasons.append(f"Cheaper than the usual price for an {match.generation} (provisional)")
@@ -114,6 +115,6 @@ def score(listing: Listing, match: Match, weights: dict) -> Score:
     scam = []
     if SCAM_TEXT.search(text):
         scam.append("Mentions deposits, couriers, shipping or a seller abroad")
-    if listing.price_gbp and listing.price_gbp < 0.6 * median and match.in_scope:
+    if price and price < 0.6 * median and match.in_scope and not listing.landed_cost_gbp:
         scam.append(f"Price is far below the usual price for an {match.generation}")
     return Score(round(s), tier, reasons, hard, scam)

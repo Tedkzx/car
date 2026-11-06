@@ -1,6 +1,6 @@
 # SX200 Tracker
 
-Finds factory-SR20DET Nissan 200SX and Silvia cars for sale in the UK, ranks them stock-first, and alerts the owner's phone. Built from the "Nissan 200SX Listing Tracker: Build Spec" (6 Nov 2026). This is **milestone 2** (version 0.2.0).
+Finds factory-SR20DET Nissan 200SX and Silvia cars for sale in the UK, ranks them stock-first, and alerts the owner's phone. Built from the "Nissan 200SX Listing Tracker: Build Spec" (6 Nov 2026). This is **milestone 2 plus the Japan export part of milestone 4** (version 0.3.0).
 
 ## For the owner (under 5 minutes)
 
@@ -83,6 +83,17 @@ tests/          labelled listings, holdout set, unit, pipeline and web tests
 | Scraper fixes reach running installs without a reinstall | Done and tested with a fake server: `recipes/manifest.json` + SHA-256 per file, only recipe files accepted. **Needs a public repository** (see below) |
 | App auto-update | Done: checks the latest GitHub release daily, verifies the installer's SHA-256, installs silently at next start and restarts. **Needs public releases** |
 | Browser sources every 30-60 minutes | Done, per-recipe `min_interval_minutes` |
+
+## Milestone 4 status (Japan exports)
+
+| Check | Status |
+| --- | --- |
+| Japan export sources | Goo-net Exchange, SBT Japan and Car From Japan verified on live pages. jdmbuysell and BE FORWARD not added (see `recipes/SOURCES.md`) |
+| Exchange rates | Frankfurter (free, no key), fetched once a day, rate and date stored on every car; approximate fallback if offline |
+| Landed cost within £50 of a hand calculation on 3 sample cars | Done, tested (spec section 8 formula; every rate is a setting) |
+| Overseas cars outside £10-20k landed never alert | Done, tested |
+| Price drops on imports | Compared in the seller's currency, so exchange-rate moves never look like a price cut |
+| UK JDM importer recipes | JDM Imports UK only so far; the spec asks the maintainer to approve a list |
 
 **Public repository needed for updates.** Running installs cannot log in to GitHub (the installer never carries a key), so scraper fixes and app updates only reach them if `Tedkzx/car` is public. The repo holds no secrets. Until then, the Sources page says "not reachable" and everything else works.
 

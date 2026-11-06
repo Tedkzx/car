@@ -10,6 +10,8 @@ from . import ntfy, windows_toast
 log = logging.getLogger(__name__)
 
 SAFETY = "Always see the car in person and run an HPI check before paying anything."
+IMPORT_NOTE = ("Import: duty may be 0% with an origin statement from the exporter. HMRC must be told (NOVA) "
+               "within 14 days of arrival. Use an inspection service in Japan before paying.")
 GEN_NAMES = {"S14": "S14", "S14a": "S14a (facelift)", "S15": "S15", "S13": "S13"}
 MARKET_NAMES = {"uk_200sx": "UK car", "jdm_registered_in_uk": "Japanese import, UK registered", "jdm_overseas": "In Japan"}
 TIER_NAMES = {"stock": "No mods mentioned", "light": "Lightly modified", "medium": "Modified", "heavy": "Heavily modified"}
@@ -33,9 +35,15 @@ class Alert:
 def car_alert(kind: str, car: dict, listing: dict, sources: list[dict], old_price: float | None = None) -> Alert:
     gen = GEN_NAMES.get(car["generation"], "200SX / Silvia")
     title_bits = {"new": "New", "price_drop": "Price drop", "relisted": "Back on sale"}
-    price = money(listing["price_gbp"])
-    if kind == "price_drop" and old_price:
-        price = f"{money(old_price)} → {money(listing['price_gbp'])}"
+    landed = listing.get("landed_cost_gbp")
+    if landed:
+        price = f"about {money(landed)} landed"
+    else:
+        price = money(listing["price_gbp"])
+    current = listing.get("price_original") if listing.get("price_original") is not None else listing["price_gbp"]
+    if kind == "price_drop" and old_price and current:
+        cut = 100 * (old_price - current) / old_price
+        price = (f"{price}, cut {cut:.0f}%" if landed else f"{money(old_price)} → {money(listing['price_gbp'])}")
     title = f"{title_bits.get(kind, 'Update')}: {gen}, {price}"
     lines = [
         listing["title"],
@@ -45,6 +53,10 @@ def car_alert(kind: str, car: dict, listing: dict, sources: list[dict], old_pric
         bits = [str(listing["year"]) if listing.get("year") else None,
                 f"{listing['mileage']:,} miles" if listing.get("mileage") else None]
         lines.append(" · ".join(b for b in bits if b))
+    if landed:
+        lines.append(f"Asking {money(listing['price_gbp'])} in Japan ({listing.get('currency')} "
+                     f"{listing.get('price_original'):,.0f} {listing.get('price_basis') or ''}). Landed estimate includes "
+                     f"shipping, 10% duty, VAT, fees and £750 prep.")
     if listing.get("location_text"):
         loc = listing["location_text"]
         if listing.get("distance_miles") is not None:
@@ -55,6 +67,8 @@ def car_alert(kind: str, car: dict, listing: dict, sources: list[dict], old_pric
         lines.append("Watch out: " + "; ".join(flags))
     if len(sources) > 1:
         lines.append("Also listed on: " + ", ".join(s["source_name"] for s in sources[1:]))
+    if landed:
+        lines.append(IMPORT_NOTE)
     lines.append(SAFETY)
     tags = {"new": ["car"], "price_drop": ["chart_with_downwards_trend"], "relisted": ["repeat"]}.get(kind, [])
     images = listing.get("image_list") or []

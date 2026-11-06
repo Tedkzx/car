@@ -1,0 +1,34 @@
+# Goo-net Exchange: Japan's big used-car marketplace, export side. About 235 Silvias on 6 Nov 2026.
+# Verified against the live site. Prices are FOB in yen; the landed-cost rules turn them into a UK price.
+# Results page through a form (POST), 20 at a time.
+name: goonet
+display_name: Goo-net Exchange (Japan)
+group: japan_export
+status: verified
+method: http
+country: japan
+currency: JPY
+price_basis: FOB
+min_interval_minutes: 120
+searches:
+  - https://www.goo-net-exchange.com/usedcars/NISSAN/SILVIA/
+  - https://www.goo-net-exchange.com/usedcars/NISSAN/180SX/
+paging:
+  method: post
+  step: 20
+  max_pages: 13
+  form: { offset: "{offset}", page: "{page}", page_flag: "1" }
+extract:
+  - type: css
+    items: 'ul.list-listview a.spread_link_new_tab'
+    fields:
+      title: 'h3.title'
+      location: 'p.location'
+      price: 'p.car-price'
+      attributes: 'ul.details'
+      url: { css: ':self', attr: href }
+      images: { css: 'img.lazyload', attr: data-src, all: true }
+      id: { from: url, regex: '/(\d{12,})/?$' }
+fixture: fixtures/goonet.html
+fixture_url: https://www.goo-net-exchange.com/usedcars/NISSAN/SILVIA/
+fixture_min_items: 15

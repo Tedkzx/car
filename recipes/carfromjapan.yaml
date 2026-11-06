@@ -1,0 +1,32 @@
+# Car From Japan exporter. Verified against the live site on 6 Nov 2026.
+# "Car Price" is FOB in US dollars (the page also shows a shipped price to a US port, not used).
+# "Grade R" on an S15 is the Spec-R.
+name: carfromjapan
+display_name: Car From Japan
+group: japan_export
+status: verified
+method: http
+country: japan
+currency: USD
+price_basis: FOB
+min_interval_minutes: 120
+searches:
+  - https://carfromjapan.com/cheap-used-nissan-silvia-for-sale
+  - https://carfromjapan.com/cheap-used-nissan-180sx-for-sale
+paging: { param: page, max_pages: 8 }
+extract:
+  - type: css
+    items: '[data-testid="car-card"]'
+    fields:
+      title: '[data-testid="car-card-title"]'
+      price: '[data-testid="car-card-price"]'
+      attributes:
+        css: ['[data-testid="car-card-reg-year"]', '[data-testid="car-card-mileage"]', '[data-testid="car-card-model-code"]',
+              '[data-testid="car-card-engine"]', '[data-testid="car-card-grade"]', '[data-testid="car-card-transmission"]']
+        all: true
+      url: { css: '[data-testid="car-card-title"] a', attr: href }
+      images: { css: 'img[alt*="nissan" i]', attr: src, all: true }
+      id: { from: url, regex: '-([0-9a-f]{24})/?$' }
+fixture: fixtures/carfromjapan.html
+fixture_url: https://carfromjapan.com/cheap-used-nissan-silvia-for-sale
+fixture_min_items: 20
