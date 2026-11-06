@@ -96,12 +96,17 @@ def country_of(location: str) -> str | None:
     return None
 
 
+# UK phone numbers: never stored (spec section 1), even when a dealer puts one in an ad title.
+PHONE = re.compile(r"(?<![\d£])(?:\+44\s?\(?0?\)?\s?|\b0)(?:\d\s?){8,9}\d(?!\d)")
+
+
 def clean_text(value: Any) -> str:
     if value is None:
         return ""
     if isinstance(value, list):
         value = " | ".join(str(v) for v in value if v)
-    return re.sub(r"\s+", " ", str(value)).strip()
+    text = re.sub(r"\s+", " ", str(value)).strip()
+    return PHONE.sub("[phone removed]", text)
 
 
 def normalise(source: str, raw: dict, default_country: str | None = None) -> Listing:

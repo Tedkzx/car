@@ -13,12 +13,15 @@
   "fixtures/exchangeandmart.html": "533f829ac1923900b9e365edc674347052afd020328b1808a84b840f7601ab2b",
   "fixtures/goonet.html": "d48c6de066084d6098e91c52704771ab6652e0d15e1a0ddceeb64269c1f0bfa0",
   "fixtures/gumtree.html": "42d8790677e462b544c22b4862bcf31fe4349b1cb7af31dabddc171a9aaa33f5",
+  "fixtures/japimportcars.html": "de2e6ca93b8c6cb1f6397b2ba65f19bc33a92296724df7251d29faa6b049eafe",
   "fixtures/japimportsuk.html": "ecb80e38d1ae43e925a33e55615365c363ef8cef45915bbdb6c039480f5d2656",
   "fixtures/pistonheads.html": "d4c661044c4b51d04f16fb0136f3ccfe51715152539456277971bb9dd73c36b8",
   "fixtures/sbtjapan.html": "cb7fd98587be2fcf33769e8cc6fc8fa2022db88a245e9430251afbd7fc89ede8",
   "goonet.yaml": "bde4c1092a79a3576f1ccde925840e8542e54e1d864b8669256c7955b899ae8f",
   "gumtree.yaml": "29e521f3fc0d992294c0450f4417578f0fa33f4221ccb9bfba96711ed4472140",
+  "japimportcars.yaml": "1524dccd7b33576f8a89fd1e4745cb8b52ece84f2e0ae20a65fbe18a873251e1",
   "japimportsuk.yaml": "37d0baa485639307ed367aa25a5a6dd806dfc48aa5507a9289d7497f884a9da4",
+  "jdmspecialists.yaml": "047abaf8d53120b80cbc35c7fb9e55add3be13e7b2cf3f0590b21efede5bac09",
   "pistonheads.yaml": "eee77ac54820ebff8870a3d5c499c3ed8f0b94a8076129f2815582bf181e1b96",
   "preloved.yaml": "3f20b2d5ac8c80e54a0251f15b90db7cc64398199c7e599e456b9a1f60fbb0ab",
   "sbtjapan.yaml": "fc713efdde41cc22bd807a9c3189e86b021b4ddfc3050cba5435f47690db571b",
@@ -29,8 +32,10 @@
   "ebay.yaml": "0.4.0",
   "fixtures/carfromjapan.html": "0.3.0",
   "fixtures/goonet.html": "0.3.0",
+  "fixtures/japimportcars.html": "0.8.0",
   "fixtures/sbtjapan.html": "0.3.0",
   "goonet.yaml": "0.3.0",
+  "japimportcars.yaml": "0.8.0",
   "sbtjapan.yaml": "0.3.0"
  }
 }

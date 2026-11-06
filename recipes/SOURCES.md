@@ -11,6 +11,11 @@ One line per source: status, last checked, method. Add a line whenever a search 
 | Exchange & Mart | Verified | 2026-11-06 | HTTP, CSS | `/nissan/silvia` and `/nissan/200` (also lists NV200 vans, dropped by the matcher) |
 | JDM Imports UK | Verified | 2026-11-06 | HTTP, CSS | Homepage lists the whole stock with a status label (Coming Soon, Reserved, Sold). Had 3 in-scope S14s on the day |
 | 350Z-UK forum | Verified | 2026-11-06 | RSS | "For Sale" section feed; mostly parts. Posts older than 120 days are ignored |
+| Jap Import Cars (High Wycombe) | Verified | 2026-11-06 | HTTP, CSS, offset paging | Approved by the owner. Also trades as "Jap Cars" on eBay's dealer showroom. Whole stock read every 6 hours (its make filter is ignored); had an S15 Spec-R and a UK S14a on the day. Mixes in "we buy your car" adverts, which the matcher drops |
+| JDM Specialists (Rainham) | Unverified | 2026-11-06 | Edge, auto | Approved by the owner. Bot protection (StackProtect) refused the cloud machine |
+| Japan Car Imports UK (Wellingborough) | Not added | 2026-11-06 | | Approved, but its showroom is mostly European cars and its list gives no prices, so cars cannot be judged against the budget |
+| JICS Motors (Maidenhead) | Not added | 2026-11-06 | | Approved, but its website's security certificate is broken; the tracker never skips that check |
+| DCY Europe (York) | Covered | 2026-11-06 | | Its stock comes through Exchange & Mart |
 | Goo-net Exchange (Japan) | Verified | 2026-11-06 | HTTP, CSS, form paging | About 235 Silvias plus 180SXs. Titles carry the trim (Spec-R, K's, Q's), so the engine can be confirmed. Yen FOB prices, landed cost applied |
 | SBT Japan | Verified | 2026-11-06 | HTTP, CSS | 50 Silvias a page. Chassis code but rarely the trim, so most go to "Needs a look". USD FOB |
 | Car From Japan | Verified | 2026-11-06 | HTTP, CSS | 25 a page. "Grade R" means Spec-R. USD FOB |

@@ -1,0 +1,14 @@
+# JDM Specialists, Rainham, Essex (jdmspecialists.co.uk). Approved by the owner on 6 Nov 2026.
+# UNVERIFIED: its site sits behind a bot-protection service (StackProtect) that refused the cloud
+# build machine, so it runs through the owner's Edge and stops at any check page.
+name: jdmspecialists
+display_name: JDM Specialists (Rainham)
+group: uk_importer
+status: unverified
+method: browser
+country: uk
+min_interval_minutes: 360
+searches:
+  - https://www.jdmspecialists.co.uk/
+extract:
+  - type: auto

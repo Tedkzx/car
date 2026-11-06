@@ -54,7 +54,8 @@ OTHER_ENGINE = rx(
 # ---- hard excludes --------------------------------------------------------
 WANTED = rx(
     r"\bwanted\b|\bwtb\b|\bwant to buy\b|\blooking for\b|\bsearching for\b|\bin search of\b|\biso\b|"
-    r"\bcash waiting\b|\bwe buy\b|\bbuying (all|any)\b|\bsell your\b"
+    r"\bcash waiting\b|\bwe buy\b|\bbuying (all|any)\b|\bsell your\b|\bbuying service\b|\bsame ?day (buying|service|purchase)\b|"
+    r"\bwe take it a?way\b|\bbest buyers\b|\bcars? wanted\b|\bwe collect\b"
 )
 PART_NOUNS = (
     r"engine|motor|gearbox|gear box|transmission|ecu|loom|wiring loom|wheels?|alloys?|rims?|tyres?|kit|bodykit|body kit|"

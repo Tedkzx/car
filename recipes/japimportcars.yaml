@@ -1,0 +1,31 @@
+# Jap Import Cars, High Wycombe (japimportcars.co.uk); also sells as "Jap Cars" on eBay's dealer
+# showroom. UK stock, GBP prices. Approved by the owner on 6 Nov 2026; verified on the live site.
+# The site ignores its make filter, so the whole stock is read (about 13 pages of 20) and the
+# matcher picks out the 200SX / Silvia cars. Each card appears twice on the page; ids de-duplicate.
+name: japimportcars
+display_name: Jap Import Cars (High Wycombe)
+group: uk_importer
+status: verified
+min_app_version: "0.8.0"   # needs offset paging (start=20, 40...)
+method: http
+country: uk
+min_interval_minutes: 360
+searches:
+  - https://www.japimportcars.co.uk/results.php?make=&model=&cat=0&submit=1
+paging: { param: start, step: 20, max_pages: 15 }
+extract:
+  - type: css
+    items: 'div.listing-box'
+    fields:
+      title: '.sportsback'
+      price: 'h2.price'
+      attributes:
+        css: ['.sport-title', '.details-list']
+        all: true
+      description: '.pro-discription'
+      url: { css: 'a[href*="/cars/"]', attr: href }
+      images: { css: 'img', attr: src, all: true }
+      id: { from: url, regex: '/(\d+)/?$' }
+fixture: fixtures/japimportcars.html
+fixture_url: https://www.japimportcars.co.uk/results.php?stock=reset
+fixture_min_items: 15

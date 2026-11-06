@@ -626,7 +626,9 @@ def run_recipe(recipe: Recipe, cfg: dict, fetcher: HttpFetcher | None = None, br
                             for k, v in (get_path(data, "paging.form") or {}).items()}
                 else:
                     param = get_path(data, "paging.param") or "page"
-                    page_url = f"{url}{'&' if '?' in url else '?'}{param}={page}"
+                    step = get_path(data, "paging.step")
+                    value = (page - 1) * int(step) if step else page  # offset paging: start=20, 40...
+                    page_url = f"{url}{'&' if '?' in url else '?'}{param}={value}"
             if form is not None and recipe.method != "browser":
                 status, html, final_url = fetcher.post(page_url, form)
             elif recipe.method == "browser":

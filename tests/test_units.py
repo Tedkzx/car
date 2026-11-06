@@ -150,3 +150,18 @@ def test_scheduler_jitter_and_missed_run_detection():
     assert s2.missed_runs() is True
     s3 = Scheduler(lambda: None, lambda: 20, lambda: 20, lambda: None)
     assert s3.missed_runs() is True
+
+
+def test_phone_numbers_never_stored_from_any_site():
+    l = normalizer.normalise("t", {"id": 1, "url": "u", "title": "Nissan 200SX CALL ON 07565211101",
+                                   "description": "Ring 01234 567890 or +44 7700 900123. £13,995, 98,000 miles"})
+    assert "0756" not in l.title and "567890" not in l.description and "900123" not in l.description
+    assert l.price_gbp == 13995 and l.mileage == 98000
+
+
+def test_offset_paging_for_jap_import_cars():
+    rec = engine.load_recipes([ROOT / "recipes"])["japimportcars"]
+    f = FakeFetcher([(200, (ROOT / "recipes/fixtures/japimportcars.html").read_text(encoding="utf-8")),
+                     (200, "<html></html>")])
+    items = engine.run_recipe(rec, config.DEFAULTS, fetcher=f)
+    assert f.urls[1].endswith("&start=20") and len(items) == 20  # each card appears twice; ids de-duplicate
