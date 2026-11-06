@@ -8,6 +8,7 @@ from enrich import plate_extract
 
 from .models import Listing
 
+MAX_PLAUSIBLE_GBP = 250_000
 POSTCODE = re.compile(r"\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})?\b")
 UK_WORDS = ("united kingdom", "uk", "england", "scotland", "wales", "northern ireland", "great britain", "gb")
 NON_UK_COUNTRIES = (
@@ -146,6 +147,8 @@ def normalise(source: str, raw: dict, default_country: str | None = None) -> Lis
     listing.currency = cur
     if cur != "GBP":
         listing.price_original, listing.price_gbp = listing.price_gbp, None
+    elif listing.price_gbp is not None and not 300 <= listing.price_gbp <= MAX_PLAUSIBLE_GBP:
+        listing.price_gbp = None  # not a real price for one of these cars (a misread, a phone number, £1 auction start)
     if listing.seller_type:
         if "trade" in listing.seller_type or "dealer" in listing.seller_type:
             listing.seller_type = "trade"

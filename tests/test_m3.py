@@ -59,3 +59,51 @@ def test_price_history_page_shows_changes():
     state._cfg["setup_complete"] = True
     html = TestClient(create_app(state)).get("/price-history").text
     assert "£19,000" in html and "£17,500" in html and "-8%" in html
+
+
+def test_misread_import_prices_from_old_version_are_removed_once():
+    from core.db import DB, cleanup_misread_import_prices, now
+
+    db = DB(":memory:")
+    ts = now()
+    db.execute("INSERT INTO listings(source, source_id, url, title, price_gbp, first_seen, last_seen) "
+               "VALUES ('goonet','1','u','NISSAN SILVIA SPEC-R',2325000,?,?)", (ts, ts))
+    db.execute("INSERT INTO listings(source, source_id, url, title, price_gbp, price_original, currency, first_seen, last_seen) "
+               "VALUES ('goonet','2','u2','NISSAN SILVIA KS',10900,2325000,'JPY',?,?)", (ts, ts))
+    db.execute("INSERT INTO cars(created_at, updated_at) VALUES (?,?)", (ts, ts))
+    db.execute("INSERT INTO car_listings(car_id, listing_id) VALUES (1,1)")
+    assert cleanup_misread_import_prices(db) == 1
+    assert [r["source_id"] for r in db.query("SELECT source_id FROM listings")] == ["2"]
+    assert db.one("SELECT COUNT(*) n FROM cars")["n"] == 0
+    assert cleanup_misread_import_prices(db) == 0  # runs once
+
+
+def test_impossible_uk_prices_are_not_shown():
+    l = normalise("t", {"id": 1, "url": "u", "title": "Nissan 200SX S14a", "price": 2325000})
+    assert l.price_gbp is None
+    assert normalise("t", {"id": 1, "url": "u", "title": "Nissan 200SX", "price": 1}).price_gbp is None
+    assert normalise("t", {"id": 1, "url": "u", "title": "Nissan 200SX", "price": 13995}).price_gbp == 13995
+
+
+def test_main_tabs_only_show_cars_inside_the_budget():
+    from fastapi.testclient import TestClient
+
+    from alerts.notifier import Notifier
+    from web.server import AppState, create_app
+
+    from .test_web import FakeScheduler
+
+    p, db, sent, cfg = make({"pistonheads": [(200, "")]})
+    p.process("pistonheads", {"id": "1", "url": "https://x/1", "title": "Nissan Silvia S15 Spec-R", "price": 18000, "year": 2001})
+    p.process("pistonheads", {"id": "2", "url": "https://x/2", "title": "Nissan Silvia S15 Spec-R Aero", "price": 34000, "year": 2002})
+    p.process("pistonheads", {"id": "3", "url": "https://x/3", "title": "Nissan Silvia S15", "price": 45000, "year": 2002})
+    state = AppState(db, p, FakeScheduler(), Notifier(lambda: cfg, sent.ntfy_send, sent.toast_send))
+    state._cfg["setup_complete"] = True
+    c = TestClient(create_app(state))
+    new, check = c.get("/?view=new").text, c.get("/?view=check").text
+    assert "£18,000" in new and "£34,000" not in new
+    assert "£45,000" not in check
+    assert "£34,000" in c.get("/?view=all").text
+    home = c.get("/").text
+    assert "In Japan" not in home.split("</nav>")[0] and ">More<" in home
+    assert "Check for updates now" in c.get("/sources").text

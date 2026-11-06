@@ -23,7 +23,7 @@ from scoring.score import score as score_listing
 from scoring.value import cohort_median
 
 from . import dedupe, health
-from .db import DB, dumps, loads, now
+from .db import DB, cleanup_misread_import_prices, dumps, loads, now
 from .matcher import classify
 from .models import Listing
 from .normalizer import normalise
@@ -56,6 +56,9 @@ class Pipeline:
         self.geo = geo or Geo(db)
         self.image_fetcher = image_fetcher
         self.fx = fx or FX(db)
+        removed = cleanup_misread_import_prices(db)
+        if removed:
+            log.info("Removed %d Japan listings an older version had priced in the wrong currency", removed)
         self.progress: dict = {"running": False, "done": 0, "total": 0, "current": ""}
 
     # ------------------------------------------------------------------

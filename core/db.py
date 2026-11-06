@@ -200,3 +200,28 @@ def loads(text: str | None, default: Any = None) -> Any:
         return json.loads(text)
     except (ValueError, TypeError):
         return default
+
+
+JAPAN_SOURCES = ("goonet", "sbtjapan", "carfromjapan")
+
+
+def cleanup_misread_import_prices(db: "DB") -> int:
+    """Version 0.2.0 could download the Japan recipes and read yen or dollar prices as pounds
+    (cars 'costing millions'). Those rows never got price_original; remove them once. The next
+    sweep adds the same cars back with converted prices and landed costs."""
+    if db.get_meta("cleanup_misread_import_prices") == "done":
+        return 0
+    marks = ",".join("?" * len(JAPAN_SOURCES))
+    ids = [r["id"] for r in db.query(
+        f"SELECT id FROM listings WHERE source IN ({marks}) AND price_original IS NULL", JAPAN_SOURCES)]
+    for lid in ids:
+        row = db.one("SELECT car_id FROM car_listings WHERE listing_id=?", (lid,))
+        for table in ("price_history", "images", "car_listings"):
+            db.execute(f"DELETE FROM {table} WHERE listing_id=?", (lid,))
+        db.execute("DELETE FROM listings WHERE id=?", (lid,))
+        if row and not db.one("SELECT 1 FROM car_listings WHERE car_id=?", (row["car_id"],)):
+            db.execute("DELETE FROM alerts_sent WHERE car_id=?", (row["car_id"],))
+            db.execute("DELETE FROM dup_candidates WHERE car_a=? OR car_b=?", (row["car_id"], row["car_id"]))
+            db.execute("DELETE FROM cars WHERE id=?", (row["car_id"],))
+    db.set_meta("cleanup_misread_import_prices", "done")
+    return len(ids)

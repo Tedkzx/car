@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="panel">
+  <h2>More</h2>
+  <p>The main tabs only show cars you could buy: the right model and engine, inside your budget of {{ cfg.budget.min_gbp | money }} to {{ cfg.budget.max_gbp | money }}. These pages show everything else the tracker keeps, for when you want to look wider.</p>
+  <table>
+    <tr><td><a href="/?view=all">All matches, any price</a></td><td>Every confirmed factory-turbo car, including those over or under your budget</td></tr>
+    <tr><td><a href="/?view=japan">In Japan, any price</a></td><td>Cars still in Japan, with the estimated cost to land them in the UK</td></tr>
+    <tr><td><a href="/everything">Everything found</a></td><td>Every 200SX, Silvia and 180SX ad seen, and why each one was or was not a match</td></tr>
+    <tr><td><a href="/price-history">Price changes</a></td><td>Cars whose price has gone up or down</td></tr>
+    <tr><td><a href="/?view=removed">Removed and sold</a></td><td>Cars that have come off sale</td></tr>
+  </table>
+</div>
+{% endblock %}

@@ -3,9 +3,16 @@ name: Build Windows installer
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
+  # Publishing a release on GitHub builds the installer and attaches it to that release,
+  # which is what running copies download to update themselves.
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing release to attach the installer to, e.g. v0.5.1 (optional)"
+        required: false
 
 permissions:
   contents: write
@@ -36,8 +43,16 @@ jobs:
       - name: Version
         id: v
         shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT; else echo "version=$(grep -oP 'VERSION = "\K[^"]+' core/version.py)" >> $GITHUB_OUTPUT; fi
+          app=$(grep -oP 'VERSION = "\K[^"]+' core/version.py)
+          echo "version=$app" >> $GITHUB_OUTPUT
+          echo "tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+          if [[ -n "$RELEASE_TAG" && "${RELEASE_TAG#v}" != "$app" ]]; then
+            echo "::error::Release $RELEASE_TAG does not match the app version $app in core/version.py. Publish v$app instead."
+            exit 1
+          fi
       - name: Bundle with PyInstaller
         run: pyinstaller installer/sx200.spec --noconfirm
       - name: Bundle self-test (recipes load and parse their saved pages)
@@ -77,9 +92,9 @@ jobs:
           path: |
             dist/SX200-Tracker-Setup.exe
             dist/SX200-Tracker-Setup.exe.sha256
-      - name: Publish release (tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Attach installer to the release
+        if: steps.v.outputs.tag != ''
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/SX200-Tracker-Setup.exe dist/SX200-Tracker-Setup.exe.sha256 --title "SX200 Tracker $GITHUB_REF_NAME" --notes "Download SX200-Tracker-Setup.exe and run it."
+        run: gh release upload "${{ steps.v.outputs.tag }}" dist/SX200-Tracker-Setup.exe dist/SX200-Tracker-Setup.exe.sha256 --clobber --repo "$GITHUB_REPOSITORY"

@@ -28,12 +28,13 @@ log = logging.getLogger(__name__)
 HERE = Path(__file__).resolve().parent
 VIEWS = {
     "new": "New",
-    "japan": "In Japan",
     "check": "Needs a look",
     "shortlist": "Shortlist",
-    "all": "All active",
+    "all": "All matches, any price",
+    "japan": "In Japan, any price",
     "removed": "Removed and sold",
 }
+MAIN_VIEWS = ("new", "check", "shortlist")
 MOT_URL = "https://www.check-mot.service.gov.uk/results?registration={reg}"  # confirm by hand: spec section 15
 
 
@@ -94,8 +95,8 @@ def car_cards(db: DB, recipes: dict, view: str, budget: dict) -> list[dict]:
         main = listings[0]
         images = loads(main["image_urls"], [])
         price = main["landed_cost_gbp"] or main["price_gbp"]
-        if view == "new" and not (price is not None and budget["min_gbp"] <= price <= budget["max_gbp"]):
-            continue  # "New" is for cars he could buy: matches outside the budget live in All active / In Japan
+        if view in ("new", "check") and not (price is not None and budget["min_gbp"] <= price <= budget["max_gbp"]):
+            continue  # the main tabs only show cars inside the budget; everything else is under More
         cards.append({
             "id": c["id"], "title": main["title"], "price": price,
             "in_budget": price is not None and budget["min_gbp"] <= price <= budget["max_gbp"],
@@ -133,7 +134,7 @@ def create_app(state: AppState) -> FastAPI:
         counts["duplicates"] = state.db.one(
             "SELECT COUNT(*) n FROM dup_candidates d JOIN cars a ON a.id=d.car_a JOIN cars b ON b.id=d.car_b "
             "WHERE d.state='pending'")["n"]
-        return {"request": request, "cfg": cfg, "banner": b, "views": VIEWS, "counts": counts,
+        return {"request": request, "cfg": cfg, "banner": b, "views": VIEWS, "main_views": MAIN_VIEWS, "counts": counts,
                 "paused": state.scheduler.paused if state.scheduler else False,
                 "last_sweep": _ago(state.db.get_meta("last_sweep")), **kw}
 
@@ -231,8 +232,10 @@ def create_app(state: AppState) -> FastAPI:
         relevant = {r["source"]: r["n"] for r in state.db.query(
             "SELECT li.source, COUNT(*) n FROM listings li JOIN car_listings cl ON cl.listing_id=li.id "
             "WHERE li.status IN ('active','relisted') GROUP BY li.source")}
+        from core.version import VERSION
+
         return tpl.TemplateResponse(request, "sources.html", ctx(request, view="sources", relevant=relevant,
-                                    updates=[u for u in updates if u]))
+                                    updates=[u for u in updates if u], version=VERSION))
 
     @app.get("/everything", response_class=HTMLResponse)
     def everything(request: Request, show: str = "active"):
@@ -262,6 +265,38 @@ def create_app(state: AppState) -> FastAPI:
                           "source_name": state.pipeline.recipes[r["source"]].display_name
                           if r["source"] in state.pipeline.recipes else r["source"]})
         return tpl.TemplateResponse(request, "everything.html", ctx(request, view="everything", items=items, show=show))
+
+    @app.post("/update-check", response_class=HTMLResponse)
+    def update_check():
+        from core.updater import Updater
+        from core.version import VERSION
+
+        upd = Updater(state.db, state.cfg, VERSION)
+        got = upd.check_app()
+        if got:
+            return HTMLResponse(f'<span class="saved">Version {got} downloaded.</span> '
+                                '<form method="post" action="/update-install" style="display:inline">'
+                                '<button class="primary">Install now</button></form>')
+        return HTMLResponse(f'<span class="note">{state.db.get_meta("update_status_app") or "No update found."}</span>')
+
+    @app.post("/update-install", response_class=HTMLResponse)
+    def update_install():
+        import os
+        import threading
+
+        from core.updater import Updater
+        from core.version import VERSION
+
+        if not Updater(state.db, state.cfg, VERSION).apply_pending():
+            return HTMLResponse('<p>No downloaded update to install. Press "Check for updates" first.</p>')
+        # The installer replaces the program and restarts it; this copy steps aside.
+        threading.Timer(2.0, lambda: os._exit(0)).start()
+        return HTMLResponse("<p>Installing the update. The tracker restarts by itself in about a minute; "
+                            "then reload this page.</p>")
+
+    @app.get("/more", response_class=HTMLResponse)
+    def more(request: Request):
+        return tpl.TemplateResponse(request, "more.html", ctx(request, view="more"))
 
     @app.get("/price-history", response_class=HTMLResponse)
     def price_history(request: Request):

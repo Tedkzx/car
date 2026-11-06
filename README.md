@@ -18,7 +18,7 @@ There is no Windows machine in the build environment, so a GitHub Actions workfl
 
 1. Create a GitHub repository and push this folder to it.
 2. Every push to `main` runs the tests on Linux and Windows, bundles the app with PyInstaller, builds `SX200-Tracker-Setup.exe` with Inno Setup, installs it silently on the Windows runner, and self-tests the installed copy. The installer is attached to the run as an artifact.
-3. Push a tag such as `v0.1.0` to publish a GitHub release with the installer attached.
+3. To release a version: on GitHub, Releases → Draft a new release → new tag `v` + the version in `core/version.py` (for example `v0.5.1`) → Publish. The build attaches the installer and its checksum to that release in about 15 minutes; running copies then update themselves (or press "Check for updates now" on the Sources page). A tag that does not match `core/version.py` fails the build on purpose.
 
 ### Commands
 
