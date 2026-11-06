@@ -89,6 +89,8 @@ def test_recipe_fields_from_real_pages():
 
 
 def test_challenge_and_block_pages_are_detected_not_bypassed():
+    # A real ad page that loads Google's reCAPTCHA script for its contact form is NOT a block page.
+    assert engine.detect_block(200, (FIX / "pistonheads_ad.html").read_text(encoding="utf-8")) is None
     cc = (FIX / "carandclassic_challenge.html").read_text(encoding="utf-8")
     eb = (FIX / "ebay_blocked.html").read_text(encoding="utf-8")
     assert engine.detect_block(403, cc)

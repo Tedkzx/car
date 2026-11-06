@@ -164,7 +164,8 @@ class Pipeline:
             self._mark_removed(name)
 
     # ------------------------------------------------------------------
-    def process(self, source: str, raw: dict, res: SweepResult | None = None, raw_path: str | None = None) -> int | None:
+    def process(self, source: str, raw: dict, res: SweepResult | None = None, raw_path: str | None = None,
+                alert: bool = True) -> int | None:
         cfg = self.cfg()
         recipe = self.recipes.get(source)
         rdata = recipe.data if recipe else {}
@@ -215,7 +216,7 @@ class Pipeline:
             d = self.geo.distance(cfg["owner"]["home_postcode"], listing.location_text)
             if d is not None:
                 self.db.execute("UPDATE listings SET distance_miles=? WHERE id=?", (d, lid))
-        sent = self._maybe_alert(car_id, lid, match, sc, listing, is_new, old_price, relisted)
+        sent = self._maybe_alert(car_id, lid, match, sc, listing, is_new, old_price, relisted) if alert else 0
         if res:
             res.alerts += sent
         return lid

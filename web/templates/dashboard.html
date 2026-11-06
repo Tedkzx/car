@@ -1,6 +1,14 @@
 {% extends "base.html" %}
 {% block body %}
 {% include "_banner.html" %}
+{% if view == 'new' %}
+<form class="panel" hx-post="/paste" hx-target="#paste-result" style="padding:16px 22px">
+  <label for="paste-url" style="margin-top:0">Found a car yourself? Paste the link and the tracker will check it</label>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="paste-url" name="url" required placeholder="https://www.autotrader.co.uk/car-details/..." style="flex:1;min-width:220px;width:auto">
+  <button class="primary">Check</button></div>
+  <div id="paste-result"></div>
+</form>
+{% endif %}
 <div id="cards" hx-get="/cars?view={{ view }}" hx-trigger="carsChanged from:body, every 120s">
 {% include "_cards.html" %}
 </div>

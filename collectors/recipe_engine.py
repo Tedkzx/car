@@ -30,12 +30,16 @@ BROWSER_UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0"
 )
+# Strong signs: these only appear on check pages.
 CHALLENGE_MARKERS = (
-    "just a moment...", "cf-chl", "challenge-platform", "captcha", "are you a robot", "confirm it's you",
-    "confirm it’s you", "pardon our interruption", "access denied", "unusual traffic", "verify you are human",
-    "please enable js and disable any ad blocker", "security checkpoint", "attention required!",
-    "verification required", "checking your browser",
+    "just a moment...", "cf-chl", "confirm it's you", "confirm it’s you", "pardon our interruption",
+    "verify you are human", "please enable js and disable any ad blocker", "security checkpoint",
+    "attention required!", "verification required", "checking your browser",
 )
+# Weak signs: normal pages also mention these (a reCAPTCHA script on a contact form, Cloudflare's
+# background script), so they only count on small pages. Real block pages are a few KB.
+WEAK_MARKERS = ("captcha", "are you a robot", "access denied", "unusual traffic", "challenge-platform")
+WEAK_MAX_BYTES = 30_000
 LOGIN_MARKERS = ("log in to continue", "sign in to continue", "you must log in")
 
 
@@ -496,7 +500,8 @@ def detect_block(status: int, html: str) -> str | None:
     head = html[:20000].lower()
     if head.lstrip().startswith(("<?xml", "<rss")) and status < 400:
         return None  # a feed: forum posts may mention captchas without being a block page
-    if status in (401, 403, 429, 503) or any(m in head for m in CHALLENGE_MARKERS):
+    weak = len(html) < WEAK_MAX_BYTES and any(m in head for m in WEAK_MARKERS)
+    if status in (401, 403, 429, 503) or weak or any(m in head for m in CHALLENGE_MARKERS):
         if status == 429:
             return "The site asked us to slow down"
         return "The site is blocking automatic checks right now"

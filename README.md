@@ -97,6 +97,14 @@ tests/          labelled listings, holdout set, unit, pipeline and web tests
 
 "New" lists only matches inside the budget (landed cost for imports). Matches outside it stay under All active, In Japan and Everything found.
 
+## Milestone 5 status
+
+| Check | Status |
+| --- | --- |
+| "Paste a link" box (on the New tab) | Done. Reads the ad page (JSON-LD, Open Graph, price in the text) and runs the matcher, flags, score and landed cost. If the site refuses automatic reading (Autotrader, eBay), the owner types the title and price instead. Pasted cars never alert |
+| Facebook opt-in | Not built. Facebook Marketplace and group ads can go through the paste box meanwhile |
+| Forums | 350Z-UK (RSS). Driftworks blocked; Zilvia is US-based |
+
 ## Milestone 4 status (Japan exports)
 
 | Check | Status |

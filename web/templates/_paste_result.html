@@ -1,0 +1,19 @@
+{% if ask %}
+<div class="panel" style="margin-top:12px">
+  <p class="warn"><strong>{{ why }}</strong> Type the details from the {{ site }} ad instead:</p>
+  <form hx-post="/paste" hx-target="#paste-result">
+    <input type="hidden" name="url" value="{{ url }}">
+    <label>Title of the ad</label><input type="text" name="title" required placeholder="e.g. 1998 Nissan 200SX S14a Turbo" style="width:min(520px,100%)">
+    <label>Price</label><input type="text" name="price" placeholder="e.g. £13,995">
+    <label>Anything else from the ad (optional)</label><textarea name="details" rows="3" placeholder="Paste the description: mileage, mods, history"></textarea>
+    <p><button class="primary">Check this car</button></p>
+  </form>
+</div>
+{% else %}
+<div class="panel" style="margin-top:12px">
+  <p><strong class="{{ 'v-good' if verdict.startswith('Match, inside') else ('v-warn' if verdict.startswith('Match') or verdict.startswith('Needs') else 'v-bad') }}">{{ verdict }}</strong>
+  {% if row and row.title %} · {{ row.title }}{% endif %}{% if row and row.eff %} · {% if row.landed_cost_gbp %}about {% endif %}{{ row.eff | money }}{% if row.landed_cost_gbp %} landed{% endif %}{% endif %}{% if row and row.score is not none %} · score {{ '%.0f' % row.score }}/100{% endif %}</p>
+  {% if reasons %}<ul class="why">{% for r in reasons %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+  {% if car_id %}<button hx-post="/cars/{{ car_id }}/shortlist" hx-swap="outerHTML" hx-target="this">Add to shortlist</button>{% endif %}
+</div>
+{% endif %}

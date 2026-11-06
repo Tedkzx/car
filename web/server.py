@@ -71,6 +71,13 @@ def _ago(ts: str | None) -> str:
     return f"{d.days} days ago"
 
 
+SPECIAL_SOURCES = {"pasted": "Pasted link"}
+
+
+def source_name(recipes: dict, name: str) -> str:
+    return recipes[name].display_name if name in recipes else SPECIAL_SOURCES.get(name, name)
+
+
 def car_cards(db: DB, recipes: dict, view: str, budget: dict) -> list[dict]:
     where = {
         "new": "c.in_scope=1 AND c.shortlist_state='new'",
@@ -108,7 +115,7 @@ def car_cards(db: DB, recipes: dict, view: str, budget: dict) -> list[dict]:
             "location": main["location_text"], "distance": main["distance_miles"], "reg": main["reg"],
             "mot_url": MOT_URL.format(reg=quote(main["reg"])) if main["reg"] else None,
             "first_seen": _ago(c["first_seen"]),
-            "links": [{"name": recipes[l["source"]].display_name if l["source"] in recipes else l["source"],
+            "links": [{"name": source_name(recipes, l["source"]),
                        "url": l["url"], "price": l["price_gbp"], "status": l["status"]} for l in listings],
             "in_scope": bool(c["in_scope"]), "engine_status": c["engine_status"],
             "landed": loads(main["landed_breakdown"]) if main["landed_cost_gbp"] else None,
@@ -163,7 +170,8 @@ def create_app(state: AppState) -> FastAPI:
         elif action == "notes":
             state.db.execute("UPDATE cars SET owner_notes=? WHERE id=?", (notes[:2000], car_id))
             return HTMLResponse('<span class="saved">Saved</span>')
-        return HTMLResponse("", headers={"HX-Trigger": "carsChanged"})
+        msg = {"shortlist": '<span class="saved">On your shortlist</span>'}.get(action, "")
+        return HTMLResponse(msg, headers={"HX-Trigger": "carsChanged"})
 
     @app.get("/banner", response_class=HTMLResponse)
     def banner_partial(request: Request):
@@ -262,8 +270,7 @@ def create_app(state: AppState) -> FastAPI:
             else:
                 verdict, cls = "Not a match", "bad"
             items.append({**dict(r), "verdict": verdict, "cls": cls, "why": why[-1] if why else "",
-                          "source_name": state.pipeline.recipes[r["source"]].display_name
-                          if r["source"] in state.pipeline.recipes else r["source"]})
+                          "source_name": source_name(state.pipeline.recipes, r["source"])})
         return tpl.TemplateResponse(request, "everything.html", ctx(request, view="everything", items=items, show=show))
 
     @app.post("/update-check", response_class=HTMLResponse)
@@ -294,6 +301,46 @@ def create_app(state: AppState) -> FastAPI:
         return HTMLResponse("<p>Installing the update. The tracker restarts by itself in about a minute; "
                             "then reload this page.</p>")
 
+    @app.post("/paste", response_class=HTMLResponse)
+    def paste(request: Request, url: str = Form(""), title: str = Form(""), price: str = Form(""),
+              details: str = Form("")):
+        from collectors import pasted
+        from collectors import recipe_engine as engine
+
+        url = url.strip()
+        recipes = state.pipeline.recipes
+        src = pasted.source_for(url, recipes)
+        if title.strip():
+            raw = pasted.from_owner(url or f"manual:{title.strip()}", title, price, details)
+        else:
+            try:
+                raw = pasted.fetch(url)
+            except engine.CollectorError as e:
+                blocked = isinstance(e, engine.BlockedError)
+                return tpl.TemplateResponse(request, "_paste_result.html", {
+                    "request": request, "ask": True, "url": url, "site": source_name(recipes, src),
+                    "why": ("That site will not let the tracker read the page." if blocked else str(e))})
+        lid = state.pipeline.process(src, raw, alert=False)
+        row = state.db.one("SELECT c.*, COALESCE(li.landed_cost_gbp, li.price_gbp) AS eff, li.landed_cost_gbp, li.title "
+                           "FROM listings li LEFT JOIN car_listings cl ON cl.listing_id=li.id "
+                           "LEFT JOIN cars c ON c.id=cl.car_id WHERE li.id=?", (lid,)) if lid else None
+        budget = state.cfg()["budget"]
+        verdict, reasons = "Not a Nissan 200SX or Silvia", []
+        if row and row["id"]:
+            reasons = loads(row["reasons"], [])
+            excluded = next((x.split(": ", 1)[1] for x in reasons if x.startswith("Excluded: ")), None)
+            reasons = [x for x in reasons if not x.startswith("Excluded: ")] + loads(row["flags"], [])
+            if row["in_scope"]:
+                inside = row["eff"] is not None and budget["min_gbp"] <= row["eff"] <= budget["max_gbp"]
+                verdict = "Match, inside your budget" if inside else "Match, but outside your budget"
+            elif not excluded and row["engine_status"] == "unknown":
+                verdict = "Needs a look: the ad does not confirm the engine"
+            else:
+                verdict = "Not a match"
+        return tpl.TemplateResponse(request, "_paste_result.html", {
+            "request": request, "ask": False, "verdict": verdict, "reasons": reasons, "row": row,
+            "car_id": row["id"] if row else None})
+
     @app.get("/more", response_class=HTMLResponse)
     def more(request: Request):
         return tpl.TemplateResponse(request, "more.html", ctx(request, view="more"))
@@ -317,8 +364,7 @@ def create_app(state: AppState) -> FastAPI:
             first, latest = points[0]["price"], points[-1]["price"]
             change = (latest - first) / first * 100 if first and latest else None
             items.append({**dict(r), "points": points, "change": change,
-                          "source_name": state.pipeline.recipes[r["source"]].display_name
-                          if r["source"] in state.pipeline.recipes else r["source"]})
+                          "source_name": source_name(state.pipeline.recipes, r["source"])})
         return tpl.TemplateResponse(request, "price_history.html", ctx(request, view="prices", items=items))
 
     @app.get("/duplicates", response_class=HTMLResponse)
