@@ -37,7 +37,7 @@ jobs:
         id: v
         shell: bash
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT; else echo "version=0.1.0" >> $GITHUB_OUTPUT; fi
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT; else echo "version=$(grep -oP 'VERSION = "\K[^"]+' app.py)" >> $GITHUB_OUTPUT; fi
       - name: Bundle with PyInstaller
         run: pyinstaller installer/sx200.spec --noconfirm
       - name: Bundle self-test (recipes load and parse their saved pages)
@@ -68,13 +68,18 @@ jobs:
           & "$env:LOCALAPPDATA\Programs\SX200 Tracker\SX200Tracker-cli.exe" --selftest
       # Optional code signing: add a certificate as repository secrets and a signtool step here.
       # Without it, Windows SmartScreen shows a blue warning: "More info", then "Run anyway".
+      - name: Checksum (running installs verify updates against it)
+        shell: pwsh
+        run: (Get-FileHash dist\SX200-Tracker-Setup.exe -Algorithm SHA256).Hash.ToLower() + "  SX200-Tracker-Setup.exe" | Out-File -Encoding ascii dist\SX200-Tracker-Setup.exe.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: SX200-Tracker-Setup
-          path: dist/SX200-Tracker-Setup.exe
+          path: |
+            dist/SX200-Tracker-Setup.exe
+            dist/SX200-Tracker-Setup.exe.sha256
       - name: Publish release (tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/SX200-Tracker-Setup.exe --title "SX200 Tracker $GITHUB_REF_NAME" --notes "Download SX200-Tracker-Setup.exe and run it."
+        run: gh release create "$GITHUB_REF_NAME" dist/SX200-Tracker-Setup.exe dist/SX200-Tracker-Setup.exe.sha256 --title "SX200 Tracker $GITHUB_REF_NAME" --notes "Download SX200-Tracker-Setup.exe and run it."

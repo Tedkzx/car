@@ -8,7 +8,8 @@ name: carandclassic
 display_name: Car & Classic
 group: uk_marketplace
 status: unverified
-method: http
+method: browser
+min_interval_minutes: 45
 country: null           # read from each listing's location
 location_filter: uk
 searches:

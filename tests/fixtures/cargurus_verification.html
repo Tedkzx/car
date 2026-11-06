@@ -1,0 +1,68 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer" />
+    
+    <!-- Fastly Bot Management Challenge Script -->
+    <script src="/_fs-ch-1T1wmsGaOgGaSxcX/challenge.js" defer></script>
+    <script src="/_fs-ch-1T1wmsGaOgGaSxcX/assets/script.js"></script>
+    
+    <title>Verification Required</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100-vh; margin: 0; background-color: #f7f7f7; }
+        .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 100%; }
+        h1 { color: #333; margin-bottom: 1rem; }
+        p { color: #666; margin-bottom: 2rem; }
+        .fastly-challenge { margin-top: 1rem; }
+        
+        /* Optional styles based on challenge status */
+        .fastly-challenge[data-challenge-status="complete"]::after {
+            content: "✓ Verification Successful";
+            color: green;
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Verification Required</h1>
+        <p>Please wait while we verify your request...</p>
+        
+        <!-- Fastly Challenge Widget -->
+        <div class="fastly-challenge"></div>
+        
+        <script>
+            // Automatically reload the page once the challenge is complete
+            const challengeObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'data-challenge-status') {
+                        const status = mutation.target.getAttribute('data-challenge-status');
+                        console.log('Challenge status changed:', status);
+                        if (status === 'complete') {
+                          if (document.referrer) {
+                            // preserve the original referrer information
+                            let updatedUrl = new URL(window.location);
+                            updatedUrl.searchParams.append('oref', document.referrer);
+                            window.location = updatedUrl.toString();
+                          } else {
+                            window.location.reload();
+                          }
+                       }
+                    }
+                });
+            });
+
+            const challengeEl = document.querySelector('.fastly-challenge');
+            if (challengeEl) {
+                challengeObserver.observe(challengeEl, { attributes: true });
+            }
+        </script>
+    </div>
+</body>
+</html>
+    

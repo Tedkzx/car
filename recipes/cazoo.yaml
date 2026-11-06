@@ -1,0 +1,13 @@
+# Cazoo (Motors.co.uk now redirects here). UNVERIFIED: a Vercel security check stopped the
+# cloud build machine.
+name: cazoo
+display_name: Cazoo (formerly Motors.co.uk)
+group: uk_marketplace
+status: unverified
+method: browser
+country: uk
+min_interval_minutes: 60
+searches:
+  - https://www.cazoo.co.uk/cars/nissan/
+extract:
+  - type: auto

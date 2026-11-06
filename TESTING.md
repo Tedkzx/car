@@ -61,3 +61,18 @@ Sources tab, **Save a problem report**: it saves a zip of the logs (no personal 
 
 Logs: `%APPDATA%\SX200Tracker\logs\`. Self-test of the scrapers:
 `"%LOCALAPPDATA%\Programs\SX200 Tracker\SX200Tracker-cli.exe" --selftest`
+
+## Milestone 2 (version 0.2.0)
+
+Install the new version over the old one; settings and saved cars are kept.
+
+1. **Edge sources.** Run one sweep of every site and send the output:
+
+   ```
+   "%LOCALAPPDATA%\Programs\SX200 Tracker\SX200Tracker-cli.exe" --sweep-once
+   ```
+
+   Each line shows a site and how many listings it found, or the reason it could not. For any Edge site that found 0 or an error, also run `--capture NAME` (autotrader, ebay, carandclassic, cargurus, cazoo, preloved, theparking) and send the saved file.
+2. **Sources tab:** 12 sites listed. Exchange & Mart, JDM Imports UK and 350Z-UK forum should say Working.
+3. **Same car?** If a "Same car?" tab appears, compare the two cars and press Same car or Different cars. "Same car" leaves one card with links to both sites.
+4. **Updates:** the Sources page shows whether scraper fixes and app updates are reachable. They are only reachable if the GitHub repository is public.

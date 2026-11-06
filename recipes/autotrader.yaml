@@ -1,0 +1,17 @@
+# Autotrader UK: the biggest stock, includes importers. Hardest to scrape (spec section 4).
+# UNVERIFIED: Cloudflare blocked the cloud build machine. Uses the owner's Edge, one search
+# per run, at most every 45 minutes. Any check page stops it; nothing tries to get past one.
+name: autotrader
+display_name: Autotrader
+group: uk_marketplace
+status: unverified
+method: browser
+country: uk
+min_interval_minutes: 45
+searches:
+  - https://www.autotrader.co.uk/car-search?make=Nissan&model=200%20SX&postcode={postcode}&sort=datedesc
+  - https://www.autotrader.co.uk/car-search?make=Nissan&model=Silvia&postcode={postcode}&sort=datedesc
+extract:
+  - type: auto
+    url_template: https://www.autotrader.co.uk/car-details/{id}
+    id_regex: '/car-details/(\d+)'

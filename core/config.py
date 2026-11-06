@@ -33,6 +33,7 @@ DEFAULTS: dict[str, Any] = {
     "schedule": {"interval_minutes": 20, "jitter_pct": 20},
     "search": {"price_min_gbp": 8000, "price_max_gbp": 25000},
     "sources": {"facebook": False, "mot_api": False, "email_alerts": False, "disabled": []},
+    "updates": {"enabled": True, "repo": "Tedkzx/car", "branch": "main"},
     "setup_complete": False,
 }
 

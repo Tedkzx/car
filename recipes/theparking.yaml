@@ -1,0 +1,15 @@
+# theparking.eu aggregator: pulls dealer stock from many European and UK sites. UK cars only.
+# UNVERIFIED: Cloudflare check on the cloud build machine.
+name: theparking
+display_name: theparking.eu
+group: aggregator
+status: unverified
+method: browser
+country: null
+location_filter: uk
+min_interval_minutes: 60
+searches:
+  - https://www.theparking.eu/used-cars/nissan-200sx.html
+  - https://www.theparking.eu/used-cars/nissan-silvia.html
+extract:
+  - type: auto

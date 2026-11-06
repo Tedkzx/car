@@ -19,7 +19,7 @@ import webbrowser
 
 from core import paths
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 PREFERRED_PORT = 8765
 log = logging.getLogger("sx200")
 
@@ -52,6 +52,7 @@ def build():
     from alerts.notifier import Notifier
     from collectors.browser_edge import EdgeBrowser
     from core.db import DB
+    from core.dedupe import default_image_fetcher
     from core.pipeline import Pipeline
     from core.scheduler import Scheduler
     from web.server import AppState
@@ -59,7 +60,8 @@ def build():
     db = DB()
     holder: dict = {}
     notifier = Notifier(lambda: holder["state"].cfg())
-    pipeline = Pipeline(db, lambda: holder["state"].cfg(), notifier, browser_factory=EdgeBrowser)
+    pipeline = Pipeline(db, lambda: holder["state"].cfg(), notifier, browser_factory=EdgeBrowser,
+                        image_fetcher=default_image_fetcher())
     scheduler = Scheduler(
         sweep=pipeline.sweep,
         interval_minutes=lambda: holder["state"].cfg()["schedule"]["interval_minutes"],
@@ -148,10 +150,18 @@ def main(argv: list[str] | None = None) -> int:
             webbrowser.open(f"http://127.0.0.1:{port_file.read_text().strip()}/")
         return 0
 
+    from core.updater import Updater
+
     state = build()
+    if Updater(state.db, state.cfg, VERSION).apply_pending():
+        log.info("Installing a downloaded update; the installer restarts the tracker")
+        lock.release()
+        return 0
     if args.sweep_once:
-        res = state.pipeline.sweep()
-        print(res)
+        res = state.pipeline.sweep(force=True)
+        for name, v in res.per_source.items():
+            print(f"{name:<16} {v}")
+        print(f"new listings {res.new_listings}, new matches {res.new_matches}, alerts {res.alerts}")
         return 0
 
     import uvicorn
@@ -182,6 +192,7 @@ def main(argv: list[str] | None = None) -> int:
     stop = threading.Event()
     starter = threading.Thread(target=_start_after_setup, args=(state, stop), daemon=True)
     starter.start()
+    threading.Thread(target=maintenance, args=(state, stop), name="maintenance", daemon=True).start()
     try:
         run_tray(url, state, stop)
     except KeyboardInterrupt:
@@ -191,6 +202,36 @@ def main(argv: list[str] | None = None) -> int:
     server.should_exit = True
     lock.release()
     return 0
+
+
+def maintenance(state, stop: threading.Event) -> None:
+    """Scraper fixes every 6 hours, recipe self-tests and the app update check once a day."""
+    from collectors import recipe_engine as engine
+    from core import health
+    from core.updater import Updater
+
+    upd = Updater(state.db, state.cfg, VERSION)
+    last_recipes = last_daily = 0.0
+    while not stop.is_set():
+        t = time.time()
+        try:
+            if t - last_recipes > 6 * 3600:
+                last_recipes = t
+                if upd.update_recipes():
+                    state.pipeline.reload_recipes()
+                    log.info("Scraper fixes applied")
+            if t - last_daily > 24 * 3600:
+                last_daily = t
+                for name, r in state.pipeline.recipes.items():
+                    ok, msg = engine.self_test(r)
+                    failed = (not ok) and r.status == "verified"
+                    health.record_selftest(state.db, name, msg if failed else None)
+                    if failed:
+                        state.notifier.maintainer(f"{r.display_name} self-test failed", msg)
+                upd.check_app()
+        except Exception:
+            log.exception("maintenance step failed")
+        stop.wait(600)
 
 
 def _start_after_setup(state, stop: threading.Event) -> None:

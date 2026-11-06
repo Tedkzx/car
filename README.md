@@ -1,6 +1,6 @@
 # SX200 Tracker
 
-Finds factory-SR20DET Nissan 200SX and Silvia cars for sale in the UK, ranks them stock-first, and alerts the owner's phone. Built from the "Nissan 200SX Listing Tracker: Build Spec" (6 Nov 2026). This is **milestone 1**.
+Finds factory-SR20DET Nissan 200SX and Silvia cars for sale in the UK, ranks them stock-first, and alerts the owner's phone. Built from the "Nissan 200SX Listing Tracker: Build Spec" (6 Nov 2026). This is **milestone 2** (version 0.2.0).
 
 ## For the owner (under 5 minutes)
 
@@ -25,7 +25,8 @@ There is no Windows machine in the build environment, so a GitHub Actions workfl
 ```
 SX200Tracker-cli.exe --selftest          test every recipe against its saved page
 SX200Tracker-cli.exe --capture ebay      save a real search page from the owner's connection
-SX200Tracker-cli.exe --sweep-once        run one sweep and print what each source returned
+SX200Tracker-cli.exe --sweep-once        run one sweep of every source and print what each returned
+python tools/make_manifest.py            after changing a recipe: lets running installs download it
 ```
 
 In development: `python app.py --no-browser`, `python -m pytest -q`, `python -m tests.labelled_eval`.
@@ -71,6 +72,22 @@ tests/          labelled listings, holdout set, unit, pipeline and web tests
 - Confirm the gov.uk MOT link format by hand with one plate (`web/server.py`, `MOT_URL`). It could not be reached from the build machine.
 - The seed price bands in `scoring/score.py` are rough guesses until milestone 3's rolling medians.
 
-### Not in milestone 1 (by design)
+## Milestone 2 status
+
+| Check | Status |
+| --- | --- |
+| New sources | Exchange & Mart, JDM Imports UK and the 350Z-UK forum verified on live pages. Autotrader, CarGurus, Cazoo (formerly Motors), Preloved and theparking.eu added as Edge sources, unverified because they block cloud machines. eBay and Car & Classic moved to Edge after they refused plain requests from the owner's home connection too. ClassicCarsForSale has closed (redirects to an auction house). See `recipes/SOURCES.md` |
+| Same car on two sites shows once with every link | Done: plate, chassis number, matching photos (perceptual hash, 2+ images within distance 6), and a "Same car?" page for probable duplicates. Tested |
+| Simulated block: backoff, circuit breaker, banner | Done in milestone 1, still tested. Added: a verified source that finds nothing four runs in a row shows "Needs attention" |
+| Daily recipe self-tests | Done |
+| Scraper fixes reach running installs without a reinstall | Done and tested with a fake server: `recipes/manifest.json` + SHA-256 per file, only recipe files accepted. **Needs a public repository** (see below) |
+| App auto-update | Done: checks the latest GitHub release daily, verifies the installer's SHA-256, installs silently at next start and restarts. **Needs public releases** |
+| Browser sources every 30-60 minutes | Done, per-recipe `min_interval_minutes` |
+
+**Public repository needed for updates.** Running installs cannot log in to GitHub (the installer never carries a key), so scraper fixes and app updates only reach them if `Tedkzx/car` is public. The repo holds no secrets. Until then, the Sources page says "not reachable" and everything else works.
+
+Bug fixed in this milestone: the plate reader took the engine code "SR20DET" for a UK plate, which could merge different cars. Engine codes are now excluded, and plate merges also need matching years.
+
+### Not in milestone 1 or 2 (by design)
 
 Autotrader and the other milestone 2 sites, image-hash and probable-duplicate merging, recipe hot-update and auto-update, daily scheduled self-tests, digest and quiet hours, full scoring and price history views, imports and landed cost, Facebook, forums, auctions, the MOT API.

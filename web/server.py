@@ -21,6 +21,7 @@ from fastapi.templating import Jinja2Templates
 from alerts.notifier import GEN_NAMES, MARKET_NAMES, TIER_NAMES
 from core import config as config_mod
 from core import health, paths, winsys
+from core import dedupe
 from core.db import DB, loads
 
 log = logging.getLogger(__name__)
@@ -121,6 +122,9 @@ def create_app(state: AppState) -> FastAPI:
         b = health.banner(state.db, state.pipeline.recipes, state.pipeline.enabled_sources(),
                           cfg["schedule"]["interval_minutes"])
         counts = {v: len(car_cards(state.db, state.pipeline.recipes, v, cfg["budget"])) for v in ("new", "check", "shortlist")}
+        counts["duplicates"] = state.db.one(
+            "SELECT COUNT(*) n FROM dup_candidates d JOIN cars a ON a.id=d.car_a JOIN cars b ON b.id=d.car_b "
+            "WHERE d.state='pending'")["n"]
         return {"request": request, "cfg": cfg, "banner": b, "views": VIEWS, "counts": counts,
                 "paused": state.scheduler.paused if state.scheduler else False,
                 "last_sweep": _ago(state.db.get_meta("last_sweep")), **kw}
@@ -215,7 +219,31 @@ def create_app(state: AppState) -> FastAPI:
     # ---- sources and settings -----------------------------------------
     @app.get("/sources", response_class=HTMLResponse)
     def sources(request: Request):
-        return tpl.TemplateResponse(request, "sources.html", ctx(request, view="sources"))
+        updates = [state.db.get_meta("update_status_recipes"), state.db.get_meta("update_status_app")]
+        return tpl.TemplateResponse(request, "sources.html", ctx(request, view="sources",
+                                    updates=[u for u in updates if u]))
+
+    @app.get("/duplicates", response_class=HTMLResponse)
+    def duplicates(request: Request):
+        rows = state.db.query(
+            "SELECT d.* FROM dup_candidates d JOIN cars a ON a.id=d.car_a JOIN cars b ON b.id=d.car_b "
+            "WHERE d.state='pending' ORDER BY d.id")
+        budget = state.cfg()["budget"]
+        all_cards = {c["id"]: c for v in ("all", "removed") for c in car_cards(state.db, state.pipeline.recipes, v, budget)}
+        pairs = [{"id": r["id"], "reason": r["reason"], "a": all_cards.get(r["car_a"]), "b": all_cards.get(r["car_b"])}
+                 for r in rows]
+        pairs = [p for p in pairs if p["a"] and p["b"]]
+        return tpl.TemplateResponse(request, "duplicates.html", ctx(request, view="duplicates", pairs=pairs))
+
+    @app.post("/duplicates/{dup_id}/{action}")
+    def duplicate_action(dup_id: int, action: str):
+        row = state.db.one("SELECT * FROM dup_candidates WHERE id=?", (dup_id,))
+        if row and action == "merge":
+            dedupe.merge_cars(state.db, row["car_a"], row["car_b"])
+            state.db.execute("UPDATE dup_candidates SET state='merged' WHERE id=?", (dup_id,))
+        elif row and action == "different":
+            state.db.execute("UPDATE dup_candidates SET state='different' WHERE id=?", (dup_id,))
+        return RedirectResponse("/duplicates", status_code=303)
 
     @app.get("/settings", response_class=HTMLResponse)
     def settings(request: Request):

@@ -1,0 +1,25 @@
+# JDM Imports UK (japimportsuk.com): a UK importer with cars already in the UK, priced in GBP.
+# Verified against the live site on 6 Nov 2026. The homepage lists the whole stock.
+name: japimportsuk
+display_name: JDM Imports UK
+group: uk_importer
+status: verified
+method: http
+country: uk
+searches:
+  - https://www.japimportsuk.com/
+paging: { max_pages: 1 }
+extract:
+  - type: css
+    items: 'div.vehicleListInner > a.card'
+    fields:
+      title: 'h3'
+      price: '.cardFooter .price'
+      attributes: '.productFigures'
+      sale_status: '[class^="status-"]'
+      url: { css: ':self', attr: href }
+      images: { css: '.cardBody', attr: style, regex: "url\\('([^']+)'\\)" }
+      id: { from: url, regex: '/inventory/([^/]+)/?' }
+fixture: fixtures/japimportsuk.html
+fixture_url: https://www.japimportsuk.com/
+fixture_min_items: 10

@@ -62,6 +62,9 @@ def test_plate_extraction():
     assert plate_extract.extract("Nissan 200SX, reg R123 ABC, MOT")[0] == "R123ABC"
     assert plate_extract.extract("2001 Silvia on Y12 ABC plates")[0] == "Y12ABC"
     assert plate_extract.extract("Nissan Silvia S15 Spec R")[0] is None
+    # Engine codes fit the plate pattern but are not plates (this merged four cars once).
+    for text in ("1994 Nissan Silvia S14 200SX SR20DET", "CA18DET swap", "RB25DET", "1JZ GTE", "SR20 DET"):
+        assert plate_extract.extract(text)[0] is None, text
 
 
 # ---- recipes -------------------------------------------------------------
@@ -92,7 +95,11 @@ def test_challenge_and_block_pages_are_detected_not_bypassed():
     assert engine.detect_block(403, eb)
     recipes = engine.load_recipes([ROOT / "recipes"])
     with pytest.raises(engine.BlockedError):
-        engine.run_recipe(recipes["carandclassic"], config.DEFAULTS, fetcher=FakeFetcher([(403, cc)]))
+        engine.run_recipe(recipes["carandclassic"], config.DEFAULTS, browser=FakeFetcher([(403, cc)]))
+    # A browser page that still shows a check after loading stops the collector too.
+    for f in ("autotrader_cloudflare.html", "cargurus_verification.html", "cazoo_vercel.html", "theparking_challenge.html"):
+        with pytest.raises(engine.BlockedError):
+            engine.run_recipe(recipes["autotrader"], config.DEFAULTS, browser=FakeFetcher([(200, (FIX / f).read_text())]))
     with pytest.raises(engine.BlockedError):
         engine.run_recipe(recipes["pistonheads"], config.DEFAULTS, fetcher=FakeFetcher([(429, "slow down")]))
 

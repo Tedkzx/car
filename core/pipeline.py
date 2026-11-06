@@ -19,7 +19,7 @@ from collectors import recipe_engine as engine
 from enrich.geo import Geo
 from scoring.score import score as score_listing
 
-from . import health
+from . import dedupe, health
 from .db import DB, dumps, loads, now
 from .matcher import classify
 from .models import Listing
@@ -43,7 +43,7 @@ class SweepResult:
 class Pipeline:
     def __init__(self, db: DB, cfg_getter: Callable[[], dict], notifier: Notifier, recipes: dict | None = None,
                  fetcher_factory: Callable[[], engine.HttpFetcher] | None = None, browser_factory=None,
-                 geo: Geo | None = None):
+                 geo: Geo | None = None, image_fetcher=None):
         self.db = db
         self.cfg = cfg_getter
         self.notifier = notifier
@@ -51,6 +51,7 @@ class Pipeline:
         self.fetcher_factory = fetcher_factory or engine.HttpFetcher
         self.browser_factory = browser_factory
         self.geo = geo or Geo(db)
+        self.image_fetcher = image_fetcher
         self.progress: dict = {"running": False, "done": 0, "total": 0, "current": ""}
 
     # ------------------------------------------------------------------
@@ -66,7 +67,10 @@ class Pipeline:
             out.append(name)
         return out
 
-    def sweep(self, only: list[str] | None = None) -> SweepResult:
+    def reload_recipes(self) -> None:
+        self.recipes = engine.load_recipes()
+
+    def sweep(self, only: list[str] | None = None, force: bool = False) -> SweepResult:
         res = SweepResult(started=now())
         names = [n for n in self.enabled_sources() if not only or n in only]
         self.progress = {"running": True, "done": 0, "total": len(names), "current": ""}
@@ -76,6 +80,10 @@ class Pipeline:
                 self.progress["current"] = self.recipes[name].display_name
                 if health.is_paused(self.db, name):
                     res.per_source[name] = "paused"
+                    self.progress["done"] += 1
+                    continue
+                if not force and not health.due(self.db, name, self.recipes[name].data.get("min_interval_minutes")):
+                    res.per_source[name] = "not due"
                     self.progress["done"] += 1
                     continue
                 if self.recipes[name].method == "browser" and browser is None and self.browser_factory:
@@ -94,6 +102,7 @@ class Pipeline:
         recipe = self.recipes[name]
         cfg = self.cfg()
         t0 = time.monotonic()
+        health.record_attempt(self.db, name)
         fetcher = self.fetcher_factory()
         raw_file = None
 
@@ -115,8 +124,12 @@ class Pipeline:
                                          f"Blocked three times in a row: {e}. The recipe may need attention.")
             return
         except Exception as e:  # isolation: any failure stays inside this source
-            msg = str(e) if isinstance(e, engine.CollectorError) else "Something went wrong reading this site"
-            log.exception("collector %s failed", name)
+            if isinstance(e, engine.CollectorError):
+                msg = str(e)
+                log.warning("collector %s: %s", name, msg)
+            else:
+                msg = "Something went wrong reading this site"
+                log.exception("collector %s failed", name)
             health.record_failure(self.db, name, msg, blocked=False)
             res.per_source[name] = f"error: {msg}"
             return
@@ -130,7 +143,10 @@ class Pipeline:
                     seen_ids.append(lid)
             except Exception:
                 log.exception("could not process a listing from %s", name)
-        health.record_success(self.db, name, len(raws), time.monotonic() - t0)
+        if health.record_success(self.db, name, len(raws), time.monotonic() - t0) and \
+                recipe.status == "verified" and recipe.data.get("expect_results", True):
+            self.notifier.maintainer(f"{recipe.display_name} keeps finding nothing",
+                                     "No listings for several runs in a row. The page layout may have changed.")
         res.per_source[name] = len(raws)
         if raws:
             self._mark_removed(name)
@@ -155,6 +171,8 @@ class Pipeline:
         if match.excluded == "other_model":
             # Keep noise (Suzuki SX4 and the like) out of the cars table; the listing row stays for first-seen logic.
             return lid
+        if match.excluded == "sold":
+            self.db.execute("UPDATE listings SET status='sold' WHERE id=?", (lid,))
         sc = score_listing(listing, match, cfg["scoring"]["weights"])
         car_id, car_is_new = self._car_for(lid, listing)
         flags = sc.hard_flags + sc.scam_flags
@@ -165,6 +183,10 @@ class Pipeline:
              dumps(match.reasons + ([f"Excluded: {match.excluded}"] if match.excluded else [])),
              int(match.in_scope), sc.mod_tier, sc.score, dumps(sc.reasons), dumps(flags), now(), car_id),
         )
+        if car_is_new and not match.excluded:
+            merged_into = dedupe.check(self.db, car_id, lid, self.image_fetcher)
+            if merged_into:
+                car_id, car_is_new = merged_into, False
         if match.in_scope and res and car_is_new:
             res.new_matches += 1
         if cfg["owner"].get("home_postcode") and listing.location_text and is_new:
@@ -216,8 +238,11 @@ class Pipeline:
             if not val:
                 continue
             other = self.db.one(
-                f"SELECT cl.car_id FROM listings li JOIN car_listings cl ON cl.listing_id=li.id "
+                f"SELECT cl.car_id, li.year FROM listings li JOIN car_listings cl ON cl.listing_id=li.id "
                 f"WHERE li.{col}=? AND li.id<>? LIMIT 1", (val, lid))
+            if other and l.year and other["year"] and abs(l.year - other["year"]) > 1:
+                log.info("same %s %s on cars of different years; not merged", col, val)
+                other = None
             if other:
                 self.db.execute("INSERT INTO car_listings(car_id, listing_id) VALUES (?,?)", (other["car_id"], lid))
                 return other["car_id"], False

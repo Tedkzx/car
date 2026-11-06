@@ -6,7 +6,8 @@ name: ebay
 display_name: eBay UK
 group: uk_marketplace
 status: unverified
-method: http
+method: browser
+min_interval_minutes: 45
 country: uk
 searches:
   - https://www.ebay.co.uk/sch/i.html?_nkw={term}&_sacat=9801&LH_PrefLoc=1&_sop=10&_udlo={price_min}&_udhi={price_max}

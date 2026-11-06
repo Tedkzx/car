@@ -95,6 +95,8 @@ SCAM_TEMPLATE = rx(
 NOT_A_CAR = rx(r"\bstorage\b|\bgarage (to let|for rent)\b|\bparking space\b|\bjob\b|\bmechanic needed\b|\bnumber plate\b|"
                r"\bprivate plate\b|\bcherished plate\b|\bregistration (number )?for sale\b")
 
+SOLD = rx(r"^\s*[\[(]?\s*sold\b|\bnow sold\b|\bsorry,? (now )?sold\b|\bsold,? sorry\b|\bsale agreed\b|^\s*sold\s*$")
+
 UK_200SX_YEARS = range(1989, 2001)
 SILVIA_YEARS = {"S13": range(1988, 1994), "S14": range(1993, 1999), "S15": range(1999, 2003)}
 
@@ -121,6 +123,9 @@ def classify(listing: Listing, include_180sx: bool = False, japan_source: bool =
         return out("other_model", "Not a Nissan 200SX or Silvia")
 
     # 2. Hard excludes, strongest first.
+    status = listing.extra.get("sale_status", "")
+    if _has(SOLD, title) or _has(SOLD, status) or _has(SOLD, listing.description[:200]):
+        return out("sold", "The ad says the car is already sold")
     if _has(SCALE_MODEL, text):
         return out("scale_model", "A scale model or toy, not a car")
     if _has(WANTED, title) or _has(rx(r"^\s*(wanted|wtb)\b"), text):

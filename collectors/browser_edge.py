@@ -14,6 +14,8 @@ import time
 
 from core import paths
 
+from .recipe_engine import CollectorError
+
 log = logging.getLogger(__name__)
 
 
@@ -22,7 +24,8 @@ class EdgeBrowser:
         self.headless = headless
         self._pw = None
         self._ctx = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()  # close() may run inside get() when Edge fails to start
+        self.failed = False
 
     def _ensure(self):
         if self._ctx is not None:
@@ -30,14 +33,22 @@ class EdgeBrowser:
         from playwright.sync_api import sync_playwright  # imported lazily: optional at runtime
 
         self._pw = sync_playwright().start()
-        self._ctx = self._pw.chromium.launch_persistent_context(
-            str(paths.data_dir() / "browser-profile"),
-            channel="msedge",
-            headless=self.headless,
-            locale="en-GB",
-        )
+        try:
+            self._ctx = self._pw.chromium.launch_persistent_context(
+                str(paths.data_dir() / "browser-profile"),
+                channel="msedge",
+                headless=self.headless,
+                locale="en-GB",
+            )
+        except Exception as e:
+            log.warning("Edge would not start: %s", e)
+            self.close()
+            self.failed = True
+            raise CollectorError("Microsoft Edge could not be opened on this PC") from e
 
     def get(self, url: str) -> tuple[int, str, str]:
+        if self.failed:  # do not retry a broken Edge for every source in the same sweep
+            raise CollectorError("Microsoft Edge could not be opened on this PC")
         with self._lock:
             self._ensure()
             page = self._ctx.new_page()
@@ -58,3 +69,4 @@ class EdgeBrowser:
             except Exception as e:  # closing must never crash the app
                 log.debug("browser close: %s", e)
             self._ctx = self._pw = None
+

@@ -1,0 +1,21 @@
+{
+ "files": {
+  "350z-uk.yaml": "c266a29588ea2404c41d239755e98f4b832bfa68067e70c40161ff467ab6c218",
+  "autotrader.yaml": "69f0bb250aeb264159866d1559c620c275bc1080b1501db00c0af32e3704a7dc",
+  "carandclassic.yaml": "335c20fd0647c038ea677c0fa89d9cee302c12946460fe3ed5b3d91a6ecad803",
+  "cargurus.yaml": "6edfa0ceeb592d6a17459e4cd464d667f77c09447fdb27d27653a71e1a94c063",
+  "cazoo.yaml": "7a49246687727f55aedfd78bf9a03929277240a7501aa00cf05e948fb164320c",
+  "ebay.yaml": "a3501e3bb3e07032bc9b1a43483ba00384a074f3c63284af6bd6be0d5b2154e7",
+  "exchangeandmart.yaml": "b6ef6881d72a55cdc2920d77d5a15e3c9ca3c7f506c55fefc16f22b3554e08af",
+  "fixtures/350z-uk.xml": "173c9c7bc2442cfaa141b906729b4f8b65ccc705f532a8868d2dfd5424fc39f7",
+  "fixtures/exchangeandmart.html": "533f829ac1923900b9e365edc674347052afd020328b1808a84b840f7601ab2b",
+  "fixtures/gumtree.html": "42d8790677e462b544c22b4862bcf31fe4349b1cb7af31dabddc171a9aaa33f5",
+  "fixtures/japimportsuk.html": "ecb80e38d1ae43e925a33e55615365c363ef8cef45915bbdb6c039480f5d2656",
+  "fixtures/pistonheads.html": "d4c661044c4b51d04f16fb0136f3ccfe51715152539456277971bb9dd73c36b8",
+  "gumtree.yaml": "29e521f3fc0d992294c0450f4417578f0fa33f4221ccb9bfba96711ed4472140",
+  "japimportsuk.yaml": "37d0baa485639307ed367aa25a5a6dd806dfc48aa5507a9289d7497f884a9da4",
+  "pistonheads.yaml": "eee77ac54820ebff8870a3d5c499c3ed8f0b94a8076129f2815582bf181e1b96",
+  "preloved.yaml": "3f20b2d5ac8c80e54a0251f15b90db7cc64398199c7e599e456b9a1f60fbb0ab",
+  "theparking.yaml": "4ab8bd3d82922c376f943de28a3e79b9ff308b3ee132f0041b6ed3fe6c4c8d87"
+ }
+}

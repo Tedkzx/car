@@ -33,7 +33,8 @@ BROWSER_UA = (
 CHALLENGE_MARKERS = (
     "just a moment...", "cf-chl", "challenge-platform", "captcha", "are you a robot", "confirm it's you",
     "confirm it’s you", "pardon our interruption", "access denied", "unusual traffic", "verify you are human",
-    "please enable js and disable any ad blocker",
+    "please enable js and disable any ad blocker", "security checkpoint", "attention required!",
+    "verification required", "checking your browser",
 )
 LOGIN_MARKERS = ("log in to continue", "sign in to continue", "you must log in")
 
@@ -190,6 +191,10 @@ def _run_strategy(tree: LexborHTMLParser, html: str, strat: dict, page_url: str)
         return out
     if kind == "jsonld":
         return _jsonld(tree, strat, page_url)
+    if kind == "rss":
+        return _rss(html, strat)
+    if kind == "auto":
+        return _auto(tree, html, strat, page_url)
     if kind == "css":
         return _css(tree, strat, page_url)
     raise ValueError(f"unknown strategy {kind}")
@@ -334,10 +339,134 @@ def _attr(node, attr: str | None) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# RSS feeds (forums). Old threads are dropped by max_age_days.
+# ---------------------------------------------------------------------------
+def _rss(text: str, strat: dict) -> list[dict]:
+    import xml.etree.ElementTree as ET
+    from datetime import datetime, timedelta, timezone
+    from email.utils import parsedate_to_datetime
+
+    start = text.find("<")
+    root = ET.fromstring(text[start:].encode("utf-8"))  # ElementTree never fetches external entities
+    max_age = strat.get("max_age_days")
+    cutoff = datetime.now(timezone.utc) - timedelta(days=int(max_age)) if max_age else None
+    out = []
+    for it in root.iter("item"):
+        when = it.findtext("pubDate")
+        try:
+            dt = parsedate_to_datetime(when) if when else None
+        except (TypeError, ValueError):
+            dt = None
+        if cutoff and dt and dt < cutoff:
+            continue
+        desc_html = it.findtext("description") or ""
+        desc = _node_text(LexborHTMLParser(desc_html).body) if desc_html.strip() else ""
+        imgs = [i.attributes.get("src") for i in LexborHTMLParser(desc_html).css("img[src]")] if desc_html else []
+        link = (it.findtext("link") or "").strip()
+        out.append({
+            "id": (it.findtext("guid") or link).strip(), "url": link, "title": (it.findtext("title") or "").strip(),
+            "description": desc[:4000], "listed": dt.isoformat() if dt else None,
+            "images": [i for i in imgs if i and i.startswith("http")][:6],
+        })
+    return out
+
+
+# ---------------------------------------------------------------------------
+# "auto": for sites not yet seen from the build machine. Reads JSON-LD, then
+# looks through any JSON the page embeds for a list of listing-like objects.
+# ---------------------------------------------------------------------------
+TITLE_KEYS = ("title", "headline", "name", "heading", "displayTitle", "makeModel", "vehicleTitle")
+PRICE_KEYS = ("price", "priceValue", "advertisedPrice", "amount", "displayPrice", "priceGbp", "formattedPrice")
+URL_KEYS = ("url", "link", "href", "canonicalUrl", "permalink", "advertUrl", "listingUrl", "detailsUrl")
+ID_KEYS = ("id", "advertId", "listingId", "adId", "uuid", "stockId", "vehicleId")
+YEAR_KEYS = ("year", "registrationYear", "modelYear", "yearOfManufacture", "vehicleYear")
+MILEAGE_KEYS = ("mileage", "odometer", "miles", "odometerReading")
+LOCATION_KEYS = ("location", "town", "city", "sellerLocation", "area", "locationName", "region")
+IMAGE_KEYS = ("images", "imageUrls", "photos", "image", "mainImage", "thumbnail", "imageUrl", "primaryImage")
+
+
+def _first(d: dict, keys: tuple) -> Any:
+    for k in keys:
+        v = d.get(k)
+        if v not in (None, "", [], {}):
+            return v
+    return None
+
+
+def _scalar(v: Any) -> Any:
+    if isinstance(v, dict):
+        return _first(v, ("value", "amount", "name", "displayValue", "text", "url", "src", "formatted"))
+    if isinstance(v, list):
+        return _scalar(v[0]) if v else None
+    return v
+
+
+def _looks_like_listing(d: Any) -> bool:
+    return isinstance(d, dict) and _first(d, TITLE_KEYS) is not None and _first(d, PRICE_KEYS) is not None
+
+
+def _auto(tree: LexborHTMLParser, html: str, strat: dict, page_url: str) -> list[dict]:
+    items = [i for i in _jsonld(tree, {"types": ["Car", "Vehicle", "Product", "Motorcycle"],
+                                       "id_regex": strat.get("id_regex")}, page_url) if i.get("title") and i.get("url")]
+    if items:
+        return items
+    blobs: list[Any] = []
+    for node in tree.css('script[type="application/json"], script#__NEXT_DATA__, script[type="application/ld+json"]'):
+        try:
+            blobs.append(json.loads(node.text(strip=False)))
+        except ValueError:
+            pass
+    for m in re.finditer(r"window\.__[A-Z_]+__\s*=\s*(\{.*?\})\s*;?\s*</script>", html, re.S):
+        try:
+            blobs.append(json.loads(m.group(1)))
+        except ValueError:
+            pass
+    best: list = []
+
+    def walk(o: Any, depth: int = 0) -> None:
+        nonlocal best
+        if depth > 12:
+            return
+        if isinstance(o, list):
+            hits = [x for x in o if _looks_like_listing(x)]
+            if len(hits) >= 2 and len(hits) >= 0.6 * len(o) and len(hits) > len(best):
+                best = hits
+            for x in o[:200]:
+                walk(x, depth + 1)
+        elif isinstance(o, dict):
+            for v in o.values():
+                walk(v, depth + 1)
+
+    for b in blobs:
+        walk(b)
+    out = []
+    for d in best:
+        item = {
+            "id": _scalar(_first(d, ID_KEYS)), "title": _scalar(_first(d, TITLE_KEYS)),
+            "price": _scalar(_first(d, PRICE_KEYS)), "year": _scalar(_first(d, YEAR_KEYS)),
+            "mileage": _scalar(_first(d, MILEAGE_KEYS)), "location": _scalar(_first(d, LOCATION_KEYS)),
+            "description": _scalar(_first(d, ("description", "subtitle", "summary", "attentionGrabber"))),
+        }
+        imgs = _first(d, IMAGE_KEYS)
+        imgs = imgs if isinstance(imgs, list) else [imgs] if imgs else []
+        item["images"] = [x for x in (_scalar(i) for i in imgs) if isinstance(x, str) and x.startswith("http")][:6]
+        url = _scalar(_first(d, URL_KEYS))
+        if not url and strat.get("url_template") and item["id"]:
+            url = strat["url_template"].format(id=item["id"])
+        item["url"] = urljoin(page_url, str(url)) if url else None
+        if item["id"] is None:
+            item["id"] = item["url"]
+        out.append(item)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Fetching
 # ---------------------------------------------------------------------------
 def detect_block(status: int, html: str) -> str | None:
     head = html[:20000].lower()
+    if head.lstrip().startswith(("<?xml", "<rss")) and status < 400:
+        return None  # a feed: forum posts may mention captchas without being a block page
     if status in (401, 403, 429, 503) or any(m in head for m in CHALLENGE_MARKERS):
         if status == 429:
             return "The site asked us to slow down"
@@ -409,7 +538,8 @@ class HttpFetcher:
 # ---------------------------------------------------------------------------
 def search_urls(recipe: dict, cfg: dict) -> list[str]:
     s = cfg.get("search", {})
-    values = {"price_min": s.get("price_min_gbp", 8000), "price_max": s.get("price_max_gbp", 25000)}
+    pc = re.sub(r"\s+", "", (cfg.get("owner", {}).get("home_postcode") or "LE1 1AA")).upper()
+    values = {"price_min": s.get("price_min_gbp", 8000), "price_max": s.get("price_max_gbp", 25000), "postcode": pc}
     urls: list[str] = []
     for tmpl in recipe.get("searches", []):
         if "{term}" in tmpl:

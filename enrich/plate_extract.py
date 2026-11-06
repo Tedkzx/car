@@ -17,6 +17,8 @@ SUFFIX = re.compile(r"\b([A-HJ-PR-Y]{3})\s?(\d{1,3})\s?([A-HJ-NP-Y])\b")
 STOPWORDS = {
     "S14", "S15", "S13", "SR20", "CA18", "FMIC", "ABS", "MOT", "HPI", "FSH", "BHP", "ECU",
 }
+# Engine and chassis codes that fit a plate pattern ("SR20 DET" looks like a current plate).
+ENGINE_CODE = re.compile(r"^(SR|CA|RB|KA|VG|VQ|VR|JZ|FJ|CR|QR|MR|HR|GA|CD|TB|TD|YD|ZD|EJ|BP|FS|KL|SV)\d{2}[A-Z]*$|^\d?JZ")
 CONTEXT = re.compile(r"\b(reg(istration)?|plate|reg\.?\s*no|registered as)\b", re.I)
 
 
@@ -32,7 +34,7 @@ def extract(text: str) -> tuple[str | None, float]:
     for pattern, base in ((CURRENT, 0.75), (PREFIX, 0.55), (SUFFIX, 0.35)):
         for m in pattern.finditer(upper):
             plate = "".join(m.groups())
-            if plate in STOPWORDS or len(plate) < 5:
+            if plate in STOPWORDS or len(plate) < 5 or ENGINE_CODE.match(plate):
                 continue
             # A prefix plate must not be a model string like "S15 SPEC" read as S15SPE.
             if pattern is PREFIX and re.fullmatch(r"S1[345].*", plate):

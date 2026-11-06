@@ -106,6 +106,15 @@ CREATE TABLE IF NOT EXISTS geo_cache (
     lon REAL,
     fetched_at TEXT
 );
+CREATE TABLE IF NOT EXISTS dup_candidates (
+    id INTEGER PRIMARY KEY,
+    car_a INTEGER NOT NULL,
+    car_b INTEGER NOT NULL,
+    reason TEXT,
+    state TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL,
+    UNIQUE(car_a, car_b)
+);
 CREATE TABLE IF NOT EXISTS meta (
     key TEXT PRIMARY KEY,
     value TEXT
@@ -113,6 +122,14 @@ CREATE TABLE IF NOT EXISTS meta (
 CREATE INDEX IF NOT EXISTS idx_listings_reg ON listings(reg);
 CREATE INDEX IF NOT EXISTS idx_listings_chassis ON listings(chassis_no);
 """
+
+
+# Columns added after milestone 1: existing databases are upgraded in place.
+MIGRATIONS = [
+    ("source_health", "last_attempt", "TEXT"),
+    ("source_health", "zero_runs", "INTEGER DEFAULT 0"),
+    ("source_health", "selftest_error", "TEXT"),
+]
 
 
 def now() -> str:
@@ -130,6 +147,10 @@ class DB:
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute("PRAGMA foreign_keys=ON")
         self.conn.executescript(SCHEMA)
+        for table, col, decl in MIGRATIONS:
+            cols = {r[1] for r in self.conn.execute(f"PRAGMA table_info({table})")}
+            if col not in cols:
+                self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
         self.conn.commit()
 
     # -- basic helpers -------------------------------------------------

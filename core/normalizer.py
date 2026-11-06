@@ -112,13 +112,18 @@ def normalise(source: str, raw: dict, default_country: str | None = None) -> Lis
     images = raw.get("images") or []
     if isinstance(images, str):
         images = [images]
+    price = parse_money(raw.get("price"))
+    if price is None and not raw.get("price"):
+        # Forum posts and some ads only state the price in the text.
+        m = re.search(r"£\s?(\d{1,3}(?:,\d{3})+|\d{4,6})(?!\s*(?:per|pm|/m|a month))", blob)
+        price = float(m.group(1).replace(",", "")) if m else None
     listing = Listing(
         source=source,
         source_id=str(raw.get("id") or raw.get("url")),
         url=str(raw.get("url") or ""),
         title=title,
         description=description,
-        price_gbp=parse_money(raw.get("price")),
+        price_gbp=price,
         price_basis=str(raw.get("price_basis") or "retail"),
         currency=str(raw.get("currency") or "GBP"),
         location_text=location,
@@ -130,7 +135,7 @@ def normalise(source: str, raw: dict, default_country: str | None = None) -> Lis
         image_urls=[str(u) for u in images if u][:10],
         listed_estimate=clean_text(raw.get("listed")) or None,
         chassis_no=clean_text(raw.get("chassis_no")) or None,
-        extra={"attributes": attributes} if attributes else {},
+        extra={k: v for k, v in (("attributes", attributes), ("sale_status", clean_text(raw.get("sale_status")))) if v},
     )
     listing.country = country_of(location) or default_country
     if listing.seller_type:

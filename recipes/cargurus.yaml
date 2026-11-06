@@ -1,0 +1,14 @@
+# CarGurus UK. UNVERIFIED: showed "Verification Required" to the cloud build machine.
+name: cargurus
+display_name: CarGurus UK
+group: uk_marketplace
+status: unverified
+method: browser
+country: uk
+min_interval_minutes: 60
+searches:
+  - https://www.cargurus.co.uk/Cars/searchResults.action?keywords=nissan+200sx
+  - https://www.cargurus.co.uk/Cars/searchResults.action?keywords=nissan+silvia
+extract:
+  - type: auto
+    url_template: https://www.cargurus.co.uk/Cars/link/{id}

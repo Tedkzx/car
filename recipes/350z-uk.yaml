@@ -1,0 +1,17 @@
+# 350Z-UK owners' forum, "For Sale" section, read through its RSS feed.
+# Verified on 6 Nov 2026. Mostly parts and other cars; the matcher does the work.
+name: 350z-uk
+display_name: 350Z-UK forum
+group: enthusiast
+status: verified
+method: http
+country: uk
+min_interval_minutes: 60
+searches:
+  - https://www.350z-uk.com/forum/32-for-sale.xml/
+extract:
+  - type: rss
+    max_age_days: 120
+fixture: fixtures/350z-uk.xml
+fixture_min_items: 0       # the saved feed has no recent posts once old ones are dropped
+expect_results: false      # weeks can pass with no new post

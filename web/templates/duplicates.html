@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="panel">
+  <h2>Is this the same car?</h2>
+  <p class="note">These look alike: same colour and area, similar price and mileage. If they are the same car, it will show once with links to both sites.</p>
+</div>
+{% if not pairs %}<div class="empty">Nothing to check.</div>{% endif %}
+{% for p in pairs %}
+<div class="panel">
+  <div class="pair">
+    {% for c in (p.a, p.b) %}
+    <div class="mini">
+      <div class="photo">{% if c.image %}<img src="{{ c.image }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}</div>
+      <h3>{{ c.title }}</h3>
+      <div class="price">{{ c.price | money }}</div>
+      <div class="muted">{% if c.year %}{{ c.year }}{% endif %}{% if c.mileage %} · {{ c.mileage | miles }} miles{% endif %}{% if c.location %} · {{ c.location }}{% endif %}</div>
+      <div class="links">{% for l in c.links %}<a href="{{ l.url }}" target="_blank" rel="noopener">Open on {{ l.name }}</a>{% endfor %}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="actions">
+    <form method="post" action="/duplicates/{{ p.id }}/merge"><button class="primary">Same car</button></form>
+    <form method="post" action="/duplicates/{{ p.id }}/different"><button>Different cars</button></form>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

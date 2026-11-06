@@ -1,0 +1,28 @@
+# Exchange & Mart. Verified against the live site on 6 Nov 2026.
+# Model pages are server-rendered. "/nissan/200" also lists NV200 vans; the matcher drops them.
+name: exchangeandmart
+display_name: Exchange & Mart
+group: uk_marketplace
+status: verified
+method: http
+country: uk
+searches:
+  - https://www.exchangeandmart.co.uk/used-cars-for-sale/nissan/silvia
+  - https://www.exchangeandmart.co.uk/used-cars-for-sale/nissan/200
+paging: { max_pages: 1 }
+extract:
+  - type: css
+    items: 'div.result-item'
+    fields:
+      id: { css: ':self', attr: adid }
+      title: '.result-item__heading h2'
+      price: '.price--primary'
+      attributes: '.key-details'
+      description: '.result-item__description'
+      location: '.result-item__distance'
+      seller_type: { css: ':self', attr: istrade, regex: '(true)' }
+      url: { css: '.result-item__heading a', attr: href }
+      images: { css: 'img.mimg', attr: data-mainimage, all: true }
+fixture: fixtures/exchangeandmart.html
+fixture_url: https://www.exchangeandmart.co.uk/used-cars-for-sale/nissan/silvia
+fixture_min_items: 1

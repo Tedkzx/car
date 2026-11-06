@@ -1,0 +1,14 @@
+# Preloved: small private ads, results are drawn in the browser.
+# UNVERIFIED: the cloud build machine got a survey page instead of results.
+name: preloved
+display_name: Preloved
+group: uk_marketplace
+status: unverified
+method: browser
+country: uk
+min_interval_minutes: 60
+searches:
+  - https://www.preloved.co.uk/search?keyword={term}
+terms: [nissan 200sx, nissan silvia]
+extract:
+  - type: auto
