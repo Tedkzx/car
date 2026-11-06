@@ -143,7 +143,7 @@ class Updater:
         pending, exe = out / "pending.json", out / "SX200-Tracker-Setup.exe"
         if not (pending.exists() and exe.exists()) or sys.platform != "win32":
             return False
-        info = json.loads(pending.read_text())
+        info = json.loads(pending.read_text(encoding="utf-8"))
         pending.unlink()
         if version_tuple(info["version"]) <= version_tuple(self.version) or sha256(exe.read_bytes()) != info["sha256"]:
             return False

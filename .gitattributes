@@ -1,0 +1,6 @@
+# Keep LF endings everywhere: recipe checksums (recipes/manifest.json) must match on Windows too.
+* text=auto eol=lf
+*.html text eol=lf
+*.xml text eol=lf
+*.ico binary
+*.png binary

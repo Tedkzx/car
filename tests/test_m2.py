@@ -95,7 +95,7 @@ class FakeHTTP:
 
 def test_recipe_hot_update_downloads_checked_files_only():
     base = "https://raw.githubusercontent.com/Tedkzx/car/main/recipes/"
-    fixed = (ROOT / "recipes/gumtree.yaml").read_text().replace("display_name: Gumtree", "display_name: Gumtree (fixed)").encode()
+    fixed = (ROOT / "recipes/gumtree.yaml").read_text(encoding="utf-8").replace("display_name: Gumtree", "display_name: Gumtree (fixed)").encode()
     evil = b"name: x\n"
     manifest = {"files": {"gumtree.yaml": sha256(fixed), "pistonheads.yaml": "0" * 64, "../app.py": sha256(evil)}}
     http = FakeHTTP({base + "manifest.json": json.dumps(manifest), base + "gumtree.yaml": fixed,
@@ -118,7 +118,7 @@ def test_unreachable_update_source_is_reported_not_fatal():
 
 
 def test_manifest_is_up_to_date():
-    saved = json.loads((ROOT / "recipes/manifest.json").read_text())
+    saved = json.loads((ROOT / "recipes/manifest.json").read_text(encoding="utf-8"))
     assert saved == build_manifest(ROOT / "recipes"), "run: python tools/make_manifest.py"
 
 
@@ -159,7 +159,7 @@ def test_milestone1_database_upgrades_in_place(tmp_path):
 # ---- new strategies and sources -----------------------------------------------------------------
 def test_rss_feed_and_sold_detection_on_real_forum_feed():
     rec = engine.load_recipes([ROOT / "recipes"])["350z-uk"]
-    xml = rec.fixture_path.read_text()
+    xml = rec.fixture_path.read_text(encoding="utf-8")
     items = engine._rss(xml, {"type": "rss"})
     assert len(items) == 25 and all(i["url"].startswith("https://www.350z-uk.com/") for i in items)
     from core.matcher import classify
@@ -178,7 +178,7 @@ def test_real_importer_page_finds_the_in_scope_cars():
     from core.normalizer import normalise
 
     rec = engine.load_recipes([ROOT / "recipes"])["japimportsuk"]
-    items = engine.extract(rec.fixture_path.read_text(), rec.data, "")
+    items = engine.extract(rec.fixture_path.read_text(encoding="utf-8"), rec.data, "")
     scoped = [i["title"] for i in items if classify(normalise("japimportsuk", i, "uk")).in_scope]
     assert len(scoped) == 3 and all("SR20DET" in t for t in scoped)
 

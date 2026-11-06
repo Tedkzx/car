@@ -147,7 +147,7 @@ def main(argv: list[str] | None = None) -> int:
         # Already running: just open the dashboard of the running copy.
         port_file = paths.data_dir() / "port.txt"
         if port_file.exists() and not args.background:
-            webbrowser.open(f"http://127.0.0.1:{port_file.read_text().strip()}/")
+            webbrowser.open(f"http://127.0.0.1:{port_file.read_text(encoding="utf-8").strip()}/")
         return 0
 
     from core.updater import Updater

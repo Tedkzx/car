@@ -25,7 +25,7 @@ def test_matcher_meets_precision_and_recall_on_labelled_set():
 
 
 def test_matcher_on_holdout_set():
-    rows = [json.loads(l) for l in (ROOT / "tests/labelled/holdout.jsonl").read_text().splitlines() if l]
+    rows = [json.loads(l) for l in (ROOT / "tests/labelled/holdout.jsonl").read_text(encoding="utf-8").splitlines() if l]
     r = evaluate(rows)
     assert r["precision"] >= 0.95 and r["recall"] >= 0.90, r["misses"]
 
@@ -77,20 +77,20 @@ def test_verified_recipes_pass_self_test_on_saved_real_pages():
 
 def test_recipe_fields_from_real_pages():
     recipes = engine.load_recipes([ROOT / "recipes"])
-    ph = engine.extract((ROOT / "recipes/fixtures/pistonheads.html").read_text(), recipes["pistonheads"].data)
+    ph = engine.extract((ROOT / "recipes/fixtures/pistonheads.html").read_text(encoding="utf-8"), recipes["pistonheads"].data)
     first = ph[0]
     assert first["url"].startswith("https://www.pistonheads.com/buy/listing/")
     assert first["price"] and first["year"] and first["location"].endswith("United Kingdom")
     assert "name" not in first and "phone" not in first  # seller details never read
-    gt = engine.extract((ROOT / "recipes/fixtures/gumtree.html").read_text(), recipes["gumtree"].data,
+    gt = engine.extract((ROOT / "recipes/fixtures/gumtree.html").read_text(encoding="utf-8"), recipes["gumtree"].data,
                         "https://www.gumtree.com/search")
     assert gt[0]["id"] == "1515568009" and "3,900" in gt[0]["price"] and "Twickenham" in gt[0]["location"]
     assert ".css-" not in gt[0]["price"]  # inline styles stripped
 
 
 def test_challenge_and_block_pages_are_detected_not_bypassed():
-    cc = (FIX / "carandclassic_challenge.html").read_text()
-    eb = (FIX / "ebay_blocked.html").read_text()
+    cc = (FIX / "carandclassic_challenge.html").read_text(encoding="utf-8")
+    eb = (FIX / "ebay_blocked.html").read_text(encoding="utf-8")
     assert engine.detect_block(403, cc)
     assert engine.detect_block(403, eb)
     recipes = engine.load_recipes([ROOT / "recipes"])
@@ -99,7 +99,7 @@ def test_challenge_and_block_pages_are_detected_not_bypassed():
     # A browser page that still shows a check after loading stops the collector too.
     for f in ("autotrader_cloudflare.html", "cargurus_verification.html", "cazoo_vercel.html", "theparking_challenge.html"):
         with pytest.raises(engine.BlockedError):
-            engine.run_recipe(recipes["autotrader"], config.DEFAULTS, browser=FakeFetcher([(200, (FIX / f).read_text())]))
+            engine.run_recipe(recipes["autotrader"], config.DEFAULTS, browser=FakeFetcher([(200, (FIX / f).read_text(encoding="utf-8"))]))
     with pytest.raises(engine.BlockedError):
         engine.run_recipe(recipes["pistonheads"], config.DEFAULTS, fetcher=FakeFetcher([(429, "slow down")]))
 

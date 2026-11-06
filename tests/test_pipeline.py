@@ -39,7 +39,7 @@ def make(pages_by_source, cfg_over=None, db=None):
 
 
 def test_sweep_real_pistonheads_page_alerts_nothing_out_of_scope():
-    html = (RFIX / "pistonheads.html").read_text()
+    html = (RFIX / "pistonheads.html").read_text(encoding="utf-8")
     p, db, sent, _ = make({"pistonheads": [(200, html)]})
     res = p.sweep()
     assert res.per_source["pistonheads"] >= 6
@@ -53,7 +53,7 @@ def test_sweep_real_pistonheads_page_alerts_nothing_out_of_scope():
 
 
 def make_page(title, price, year=1997, loc="Leicester, United Kingdom", aid="900001"):
-    html = (RFIX / "pistonheads.html").read_text()
+    html = (RFIX / "pistonheads.html").read_text(encoding="utf-8")
     # Rewrite the first advert into an in-scope car to drive the alert path with real page structure.
     html = html.replace('"headline":"Nissan Silvia S15 "', f'"headline":"{title}"', 1)
     html = html.replace('"id":"20375305"', f'"id":"{aid}"').replace('Advert:20375305', f'Advert:{aid}')
@@ -90,7 +90,7 @@ def test_out_of_budget_and_flagged_cars_do_not_alert():
 
 
 def test_blocked_source_backs_off_and_others_keep_running():
-    blocked = (FIX / "carandclassic_challenge.html").read_text()
+    blocked = (FIX / "carandclassic_challenge.html").read_text(encoding="utf-8")
     ph = make_page("Nissan Silvia S15 Spec-R", 18000)
     p, db, sent, _ = make({"pistonheads": [(200, ph)], "gumtree": [(403, blocked)]})
     res = p.sweep()
@@ -132,7 +132,7 @@ def test_same_plate_on_two_sources_is_one_car():
 
 
 def test_noise_listings_never_become_cars():
-    html = (FIX / "pistonheads_keyword.html").read_text()
+    html = (FIX / "pistonheads_keyword.html").read_text(encoding="utf-8")
     p, db, sent, _ = make({"pistonheads": [(200, html)]})
     p.sweep()
     titles = [r["title"] for r in db.query(
